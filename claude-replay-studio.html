@@ -1,0 +1,1936 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-replay studio</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#ddd;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:16px;align-items:start}
+.player-col{position:sticky;top:16px;min-width:0}
+.settings{background:#1b1b1b;border:1px solid #333;border-radius:6px;padding:12px 16px;min-width:0}
+h1{font-size:16px;margin:0 0 4px}
+h2{font-size:13px;margin:16px 0 6px;color:#9cf;text-transform:uppercase;letter-spacing:.05em}
+.hint{margin:0 0 8px;color:#999;font-size:12px}
+.row{display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;margin:4px 0}
+.row label{color:#ccc}
+.row input,.row select{width:100%;background:#0d0d0d;color:#eee;border:1px solid #444;border-radius:3px;padding:3px 6px;font:inherit}
+.row input[type="checkbox"]{width:auto;justify-self:start}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.side{display:grid;gap:16px;min-width:0}
+.warning{border:2px solid #e05252;background:#2a1212;color:#ffd0d0;padding:8px;border-radius:4px;font-weight:600}
+body.dragging{outline:3px dashed #9cf;outline-offset:-6px}
+#embed-snippet{width:100%;height:90px;background:#0d0d0d;color:#bde;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+#parse-redact{width:100%;height:70px;background:#0d0d0d;color:#eee;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+#config-json{width:100%;height:220px;background:#0d0d0d;color:#bde;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+button{background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:3px;padding:4px 10px;font:inherit;cursor:pointer}
+#status{margin:8px 0 0;min-height:1.4em;color:#fc9}
+@media (max-width:900px){
+.layout{grid-template-columns:minmax(0,1fr)}
+.player-col{position:static}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="player-col">
+<claude-replay id="player"><script type="application/json" data-timeline>{"version":1,"meta":{"title":"claude-replay sample","claudeVersion":"2.1.308","model":"Sonnet 5.5","modelId":"claude-sonnet-5-5","effort":"high","agent":"orchestrator","cwd":"~/Projects/demo-app","project":"demo-app","branch":"main","isWorktree":false,"permissionMode":"bypassPermissions","durationMs":42000},"events":[{"type":"prompt","t":0,"turn":1,"text":"Add a --version flag to the CLI and run the tests"},{"type":"thinking","t":2000,"turn":1,"contextTokens":42002,"durationMs":5200},{"type":"text","t":4000,"turn":1,"contextTokens":42002,"text":"Reading the CLI entry point."},{"type":"tool_use","t":5000,"turn":1,"contextTokens":42002,"id":"t1","name":"Read","summary":"~/Projects/demo-app/bin/cli.js","durationMs":1000},{"type":"tool_result","t":6000,"turn":1,"toolUseId":"t1","isError":false,"lines":["1\tcli.js line 1","2\tcli.js line 2","3\tcli.js line 3","4\tcli.js line 4","5\tcli.js line 5","6\tcli.js line 6","7\tcli.js line 7","8\tcli.js line 8","9\tcli.js line 9","10\tcli.js line 10","11\tcli.js line 11","12\tcli.js line 12","13\tcli.js line 13","14\tcli.js line 14","15\tcli.js line 15","16\tcli.js line 16","17\tcli.js line 17","18\tcli.js line 18","19\tcli.js line 19","20\tcli.js line 20"],"totalLines":30},{"type":"tool_use","t":8000,"turn":1,"contextTokens":42002,"id":"t2","name":"Edit","summary":"~/Projects/demo-app/bin/cli.js","durationMs":1000},{"type":"tool_result","t":9000,"turn":1,"toolUseId":"t2","isError":false,"lines":["The file ~/Projects/demo-app/bin/cli.js has been updated successfully."],"totalLines":1},{"type":"tool_use","t":10000,"turn":1,"contextTokens":42002,"id":"t3","name":"Bash","summary":"npm test","durationMs":8000},{"type":"tool_result","t":18000,"turn":1,"toolUseId":"t3","isError":false,"lines":["> demo-app@1.0.0 test","> node --test","","# pass 12","# fail 0"],"totalLines":5},{"type":"text","t":20000,"turn":1,"contextTokens":42002,"text":"Added `--version`. All 12 tests pass."},{"type":"prompt","t":30000,"turn":2,"text":"Ask a planner to outline the release steps"},{"type":"tool_use","t":32000,"turn":2,"contextTokens":42002,"id":"t4","name":"Agent","summary":"planner: Outline release steps","durationMs":1000},{"type":"tool_result","t":33000,"turn":2,"toolUseId":"t4","isError":false,"lines":["Running in background"],"totalLines":1},{"type":"text","t":42000,"turn":2,"contextTokens":42002,"text":"Planner finished: 1. bump version 2. tag 3. publish."}]}</script></claude-replay>
+</div>
+<div class="side">
+<form class="settings" id="studio" autocomplete="off">
+<h1>claude-replay studio</h1>
+<p class="hint">Runs entirely in this page. Files you open are read locally and never uploaded.</p>
+
+<h2>Input</h2>
+<div class="row"><label for="timeline-file">Open transcript (.jsonl) or timeline.json</label><input type="file" id="timeline-file" accept=".jsonl,.json,application/json"></div>
+<p class="hint">Or drop a file anywhere on this page. Transcripts are in ~/.claude/projects/.</p>
+<p id="input-status" role="status"></p>
+
+<h2>Parser (.jsonl only)</h2>
+<div class="row"><label for="parse-title">Title</label><input type="text" id="parse-title"></div>
+<div class="row"><label for="parse-turns-from">Keep turns from / to (others removed)</label><div class="pair"><input type="number" id="parse-turns-from" min="1" step="1" placeholder="from"><input type="number" id="parse-turns-to" min="1" step="1" placeholder="to"></div></div>
+<div class="row"><label for="parse-thinking-text">Include thinking text</label><input type="checkbox" id="parse-thinking-text"></div>
+<div class="row"><label for="parse-max-result-lines">Max result lines</label><input type="number" id="parse-max-result-lines" min="0" step="1" placeholder="20" value=""></div>
+<div><label for="parse-redact">Extra redact patterns (regex, one per line)</label><textarea id="parse-redact" spellcheck="false"></textarea></div>
+
+<h2>Redaction</h2>
+<p id="redaction-count"></p>
+<div id="review-warning" class="warning" role="note">Review before publishing. Redaction is pattern-based: it replaces home paths, your username, common token formats, emails and IPv4 addresses. It does not catch internal hostnames, people's names, client or project names, or secrets in other formats. Watch the whole replay and read timeline.json before you share anything.</div>
+
+<h2>Export</h2>
+<p><button type="button" id="download-timeline">Download timeline.json</button> <button type="button" id="export-showcase">Export showcase HTML</button></p>
+<p class="hint">The showcase is one self-contained HTML file with the current player settings frozen in. Open it directly, or host it next to your page and paste the snippet.</p>
+<textarea id="embed-snippet" readonly spellcheck="false"></textarea>
+<p><button type="button" id="copy-snippet">Copy snippet</button></p>
+</form>
+<form class="settings" id="settings" autocomplete="off">
+<h2>Player settings</h2>
+
+<h2>Playback</h2>
+<div class="row"><label for="speed">Speed</label><input type="number" id="speed" step="0.1" min="0.1" max="20"></div>
+<div class="row"><label for="gap-ms">Gap between segments (ms)</label><input type="number" id="gap-ms" step="10" min="0" max="5000"></div>
+<div class="row"><label for="loop">Loop</label><input type="checkbox" id="loop"></div>
+<div class="row"><label for="controls">Controls</label><input type="checkbox" id="controls"></div>
+<div class="row"><label for="turns-from">Play turns from / to (hidden turns stay in export)</label><div class="pair"><input type="number" id="turns-from" min="1" step="1" placeholder="from"><input type="number" id="turns-to" min="1" step="1" placeholder="to"></div></div>
+
+<h2>Typing</h2>
+<div class="row"><label for="typing-cps">Chars per second</label><input type="number" id="typing-cps" step="1" min="1"></div>
+<div class="row"><label for="typing-jitter">Jitter (0-0.9)</label><input type="number" id="typing-jitter" step="0.05" min="0" max="0.9"></div>
+<div class="row"><label for="typing-max-ms">Max duration (ms)</label><input type="number" id="typing-max-ms" step="100" min="0"></div>
+<div class="row"><label for="typing-multiplier">Multiplier</label><input type="number" id="typing-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Thinking</h2>
+<div class="row"><label for="thinking-scale">Scale</label><input type="number" id="thinking-scale" step="0.05" min="0"></div>
+<div class="row"><label for="thinking-min-ms">Min (ms)</label><input type="number" id="thinking-min-ms" step="100" min="0"></div>
+<div class="row"><label for="thinking-max-ms">Max (ms)</label><input type="number" id="thinking-max-ms" step="100" min="0"></div>
+<div class="row"><label for="thinking-multiplier">Multiplier</label><input type="number" id="thinking-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Tool wait</h2>
+<div class="row"><label for="tool-scale">Scale</label><input type="number" id="tool-scale" step="0.05" min="0"></div>
+<div class="row"><label for="tool-min-ms">Min (ms)</label><input type="number" id="tool-min-ms" step="100" min="0"></div>
+<div class="row"><label for="tool-max-ms">Max (ms)</label><input type="number" id="tool-max-ms" step="100" min="0"></div>
+<div class="row"><label for="tool-multiplier">Multiplier</label><input type="number" id="tool-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Output</h2>
+<div class="row"><label for="output-cps">Chars per second</label><input type="number" id="output-cps" step="10" min="1"></div>
+<div class="row"><label for="output-max-ms">Max duration (ms)</label><input type="number" id="output-max-ms" step="100" min="0"></div>
+<div class="row"><label for="output-multiplier">Multiplier</label><input type="number" id="output-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Results and header</h2>
+<div class="row"><label for="results-show">Show tool results</label><input type="checkbox" id="results-show"></div>
+<div class="row"><label for="results-lines">Result lines</label><input type="number" id="results-lines" step="1" min="0" max="50"></div>
+<div class="row"><label for="header-show">Show header</label><input type="checkbox" id="header-show"></div>
+<div class="row"><label for="billing">Billing text</label><input type="text" id="billing" placeholder="API Usage Billing"></div>
+
+<h2>Layout</h2>
+<div class="row"><label for="width">Width (css)</label><input type="text" id="width"></div>
+<div class="row"><label for="height">Height (css)</label><input type="text" id="height"></div>
+<div class="row"><label for="fit">Fit</label><select id="fit"><option value="none">none</option><option value="width">width</option></select></div>
+<div class="row"><label for="columns">Columns (fit: width)</label><input type="number" id="columns" step="1" min="40" max="300"></div>
+<div class="row"><label for="font-size">Font size (px)</label><input type="number" id="font-size" step="1" min="6" max="48"></div>
+<div class="row"><label for="scale">Scale</label><input type="number" id="scale" step="0.05" min="0.25" max="4"></div>
+<div class="row"><label for="font-family">Font family</label><input type="text" id="font-family"></div>
+<div class="row"><label for="theme">Theme</label><select id="theme"><option value="dark">dark</option><option value="light">light</option></select></div>
+
+<h2>Config JSON</h2>
+<textarea id="config-json" readonly spellcheck="false"></textarea>
+<p><button type="button" id="copy-config">Copy config</button></p>
+<p id="status" role="status"></p>
+</form>
+</div>
+</div>
+<script type="application/json" id="player-sources">["const CONFIG_LENGTH = /^(auto|0|\\d+(\\.\\d+)?(px|%|em|rem|vh|vw|vmin|vmax|ch|pt))$/;\nconst CONFIG_FONT = /^[^;{}\u003c>\\\\]+$/;\n\nconst CONFIG_STRING_CHECKS = {\n  width: (v) => CONFIG_LENGTH.test(v),\n  height: (v) => CONFIG_LENGTH.test(v),\n  fit: (v) => v === 'none' || v === 'width',\n  theme: (v) => v === 'dark' || v === 'light',\n  fontFamily: (v) => CONFIG_FONT.test(v),\n};\n\nconst CONFIG_MS = [0, 600000];\nconst CONFIG_MULTIPLIER = [0.05, 20];\n\nconst CONFIG_RANGES = {\n  columns: [40, 300, true],\n  fontSize: [6, 48],\n  scale: [0.25, 4],\n  seed: [-2147483648, 2147483647, true],\n  speed: [0.1, 20],\n  gapMs: [0, 5000],\n  typing: {\n    cps: [1, 100000],\n    jitter: [0, 0.9],\n    punctuationPauseMs: CONFIG_MS,\n    maxMs: CONFIG_MS,\n    submitPauseMs: CONFIG_MS,\n    multiplier: CONFIG_MULTIPLIER,\n  },\n  thinking: { scale: [0, 100], minMs: CONFIG_MS, maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },\n  tool: { scale: [0, 100], minMs: CONFIG_MS, maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },\n  output: { cps: [1, 100000], maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },\n  results: { lines: [0, 50, true] },\n  status: { contextWindow: [1000, 1000000000, true], compactions: [0, 1000000, true] },\n};\n\nfunction configDeepFreeze(value) {\n  if (value && typeof value === 'object') {\n    Object.values(value).forEach(configDeepFreeze);\n    Object.freeze(value);\n  }\n  return value;\n}\n\nexport const DEFAULT_CONFIG = configDeepFreeze({\n  width: '100%',\n  height: '600px',\n  fit: 'none',\n  columns: 100,\n  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace',\n  fontSize: 13,\n  scale: 1,\n  theme: 'dark',\n  autoplay: true,\n  loop: false,\n  controls: true,\n  seed: 1,\n  speed: 1,\n  turns: null,\n  gapMs: 150,\n  typing: { cps: 28, jitter: 0.35, punctuationPauseMs: 120, maxMs: 6000, submitPauseMs: 350, multiplier: 1 },\n  thinking: { scale: 0.25, minMs: 800, maxMs: 4000, multiplier: 1 },\n  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1 },\n  output: { cps: 600, maxMs: 2500, multiplier: 1 },\n  results: { show: true, lines: 3 },\n  header: { show: true, billing: null },\n  status: { project: null, branch: null, model: null, effort: null, contextWindow: 1000000, compactions: 0 },\n});\n\nfunction configIsObject(value) {\n  return value !== null && typeof value === 'object' && !Array.isArray(value);\n}\n\nfunction configNumber(value, fallback, range) {\n  const n =\n    typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;\n  if (!Number.isFinite(n)) return fallback;\n  const clamped = Math.min(range[1], Math.max(range[0], n));\n  return range[2] ? Math.round(clamped) : clamped;\n}\n\nfunction configTurns(value) {\n  if (!Array.isArray(value) || value.length !== 2) return null;\n  const pair = value.map((v) => configNumber(v, NaN, [1, Number.MAX_SAFE_INTEGER, true]));\n  return Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && pair[0] \u003c= pair[1] ? pair : null;\n}\n\nfunction configField(key, fallback, value, range) {\n  if (typeof fallback === 'number') return configNumber(value, fallback, range);\n  if (typeof fallback === 'boolean') return typeof value === 'boolean' ? value : fallback;\n  if (key === 'turns') return configTurns(value);\n  if (fallback === null) return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;\n  const check = CONFIG_STRING_CHECKS[key];\n  return typeof value === 'string' && check(value.trim()) ? value.trim() : fallback;\n}\n\nexport function normalizeConfig(partial) {\n  try {\n    const input = configIsObject(partial) ? partial : {};\n    const out = {};\n    for (const key of Object.keys(DEFAULT_CONFIG)) {\n      const fallback = DEFAULT_CONFIG[key];\n      if (configIsObject(fallback)) {\n        const given = configIsObject(input[key]) ? input[key] : {};\n        const ranges = CONFIG_RANGES[key] || {};\n        out[key] = {};\n        for (const sub of Object.keys(fallback)) {\n          out[key][sub] = configField(sub, fallback[sub], given[sub], ranges[sub]);\n        }\n      } else {\n        out[key] = configField(key, fallback, input[key], CONFIG_RANGES[key]);\n      }\n    }\n    return out;\n  } catch {\n    return JSON.parse(JSON.stringify(DEFAULT_CONFIG));\n  }\n}\n","const FORMAT_FOOTERS = {\n  bypassPermissions: '⏵⏵ bypass permissions on (shift+tab to cycle)',\n  acceptEdits: '⏵⏵ accept edits on (shift+tab to cycle)',\n  plan: '⏸ plan mode on (shift+tab to cycle)',\n};\n\nexport function contextPercent(tokens, total) {\n  const t = Number(tokens);\n  const w = Number(total);\n  if (!(t > 0) || !(w > 0)) return 0;\n  return Math.min(100, Math.floor((t * 100) / w));\n}\n\nexport function contextBar(pct) {\n  const filled = Math.min(10, Math.max(0, Math.floor(Number(pct) / 10) || 0));\n  return '█'.repeat(filled) + '░'.repeat(10 - filled);\n}\n\nexport function contextTier(pct) {\n  if (pct \u003c 30) return 'green';\n  if (pct \u003c 50) return 'yellow';\n  if (pct \u003c 75) return 'orange';\n  return 'red';\n}\n\nexport function formatWindowSize(n) {\n  return n >= 1000000 ? `${Math.floor(n / 1000000)}M` : `${Math.floor(n / 1000)}k`;\n}\n\nexport function formatDuration(ms) {\n  const secs = Math.max(0, Math.floor(Number(ms) / 1000) || 0);\n  if (secs >= 3600) {\n    const minutes = Math.floor((secs % 3600) / 60);\n    return `${Math.floor(secs / 3600)}h ${String(minutes).padStart(2, '0')}m`;\n  }\n  if (secs >= 60) return `${Math.floor(secs / 60)}m`;\n  return `${secs}s`;\n}\n\nfunction formatPick(override, value, fallback) {\n  if (override !== null && override !== undefined && override !== '') return override;\n  if (value !== null && value !== undefined && value !== '') return value;\n  return fallback;\n}\n\nexport function statusParts(meta, config, live) {\n  const m = meta || {};\n  const s = (config && config.status) || {};\n  const l = live || {};\n  const contextSize = s.contextWindow;\n  const pct = contextPercent(l.contextTokens, contextSize);\n  return {\n    project: formatPick(s.project, m.project, ''),\n    branch: formatPick(s.branch, m.branch, 'N/A'),\n    model: formatPick(s.model, m.model, ''),\n    effort: formatPick(s.effort, m.effort, null),\n    bar: contextBar(pct),\n    pct,\n    tier: contextTier(pct),\n    size: formatWindowSize(contextSize),\n    duration: formatDuration(l.sessionMs),\n    compactions: s.compactions,\n  };\n}\n\nexport function headerLines(meta, config) {\n  const m = meta || {};\n  const billing = config && config.header ? config.header.billing : null;\n  const version = m.claudeVersion ? `Claude Code v${m.claudeVersion}` : 'Claude Code';\n  const model = m.model || 'Claude';\n  let second = m.effort ? `${model} with ${m.effort} effort` : model;\n  if (billing) second += ` · ${billing}`;\n  const third = `${m.agent ? `@${m.agent} · ` : ''}${m.cwd || ''}`;\n  return [version, second, third];\n}\n\nexport function footerText(permissionMode) {\n  return FORMAT_FOOTERS[permissionMode] || '? for shortcuts';\n}\n\nexport function toolLabel(event) {\n  return `${event.name}(${event.summary === undefined || event.summary === null ? '' : event.summary})`;\n}\n\nfunction formatSpans(text) {\n  const spans = [];\n  const pattern = /`([^`\\n]+)`|\\*\\*([^\\n]+?)\\*\\*/g;\n  let last = 0;\n  let match;\n  while ((match = pattern.exec(text)) !== null) {\n    if (match.index > last) spans.push({ kind: 'text', text: text.slice(last, match.index) });\n    spans.push(match[1] !== undefined ? { kind: 'code', text: match[1] } : { kind: 'bold', text: match[2] });\n    last = pattern.lastIndex;\n  }\n  if (last \u003c text.length) spans.push({ kind: 'text', text: text.slice(last) });\n  return spans;\n}\n\nexport function parseMarkdownLite(text) {\n  const lines = String(text === undefined || text === null ? '' : text).split(/\\r?\\n/);\n  const blocks = [];\n  let para = [];\n  const flush = () => {\n    if (para.length) blocks.push({ kind: 'para', spans: formatSpans(para.join('\\n')) });\n    para = [];\n  };\n  for (let i = 0; i \u003c lines.length; i++) {\n    const line = lines[i];\n    const fence = /^\\s*```(\\S*)\\s*$/.exec(line);\n    if (fence) {\n      flush();\n      const body = [];\n      i++;\n      while (i \u003c lines.length && !/^\\s*```\\s*$/.test(lines[i])) body.push(lines[i++]);\n      blocks.push({ kind: 'code', lang: fence[1], text: body.join('\\n') });\n      continue;\n    }\n    const heading = /^(#{1,6})\\s+(.*)$/.exec(line);\n    if (heading) {\n      flush();\n      blocks.push({ kind: 'heading', level: heading[1].length, spans: formatSpans(heading[2]) });\n      continue;\n    }\n    const bullet = /^\\s*[-*+]\\s+(.*)$/.exec(line);\n    if (bullet) {\n      flush();\n      blocks.push({ kind: 'bullet', spans: formatSpans(bullet[1]) });\n      continue;\n    }\n    if (line.trim() === '') flush();\n    else para.push(line);\n  }\n  flush();\n  return blocks;\n}\n","import { normalizeConfig } from './config.js';\n\nconst SCHEDULE_TYPES = ['prompt', 'thinking', 'text', 'tool_use', 'tool_result'];\nconst SCHEDULE_PUNCTUATION = '.,;:?!';\n\nexport function validateTimeline(obj) {\n  if (obj === null || typeof obj !== 'object') throw new Error('timeline: expected an object');\n  if (obj.version !== 1) throw new Error(`version: expected 1, got ${JSON.stringify(obj.version)}`);\n  if (!Array.isArray(obj.events)) throw new Error('events: expected an array');\n  obj.events.forEach((event, i) => {\n    if (event === null || typeof event !== 'object' || !SCHEDULE_TYPES.includes(event.type)) {\n      const got = event === null || typeof event !== 'object' ? typeof event : JSON.stringify(event.type);\n      throw new Error(`events[${i}].type: unknown type ${got}`);\n    }\n  });\n  return obj;\n}\n\nfunction scheduleMulberry32(seed) {\n  let a = seed >>> 0;\n  return () => {\n    a = (a + 0x6d2b79f5) >>> 0;\n    let t = a;\n    t = Math.imul(t ^ (t >>> 15), t | 1);\n    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n  };\n}\n\nfunction scheduleClamp(value, min, max) {\n  return Math.min(max, Math.max(min, value));\n}\n\nfunction scheduleNumber(value) {\n  const n = Number(value);\n  return Number.isFinite(n) ? n : 0;\n}\n\nfunction scheduleTyping(text, typing, rng) {\n  const base = 1000 / typing.cps;\n  const delays = [];\n  let sum = 0;\n  for (let i = 0; i \u003c text.length; i++) {\n    let delay = base * (1 + typing.jitter * (2 * rng() - 1));\n    if (SCHEDULE_PUNCTUATION.includes(text[i])) delay += typing.punctuationPauseMs;\n    delays.push(delay);\n    sum += delay;\n  }\n  const factor = (sum > typing.maxMs ? typing.maxMs / sum : 1) * typing.multiplier;\n  const duration = Math.round(sum * factor);\n  let acc = 0;\n  const charTimes = delays.map((delay) => {\n    acc += delay * factor;\n    return Math.min(duration, Math.round(acc));\n  });\n  return { duration, charTimes };\n}\n\nexport function buildSchedule(timeline, config) {\n  const cfg = normalizeConfig(config);\n  const events = timeline && Array.isArray(timeline.events) ? timeline.events : [];\n  const rng = scheduleMulberry32(cfg.seed);\n  const gap = Math.round(cfg.gapMs);\n  const segments = [];\n  let cursor = 0;\n  let totalMs = 0;\n  events.forEach((event, eventIndex) => {\n    if (cfg.turns) {\n      const turn = Number(event.turn);\n      if (!(turn >= cfg.turns[0] && turn \u003c= cfg.turns[1])) return;\n    }\n    if (event.type === 'tool_result' && !cfg.results.show) return;\n    const place = (kind, duration, extra, pause) => {\n      const segment = {\n        kind,\n        start: cursor,\n        end: cursor + duration,\n        eventIndex,\n        turn: scheduleNumber(event.turn),\n        sessionMs: scheduleNumber(event.t),\n      };\n      if (Number.isFinite(event.contextTokens)) segment.contextTokens = event.contextTokens;\n      segments.push(Object.assign(segment, extra));\n      totalMs = Math.max(totalMs, segment.end);\n      cursor = segment.end + pause;\n    };\n    if (event.type === 'prompt') {\n      const typed = scheduleTyping(String(event.text === undefined || event.text === null ? '' : event.text), cfg.typing, rng);\n      place('type', typed.duration, { charTimes: typed.charTimes }, 0);\n      place('submit', 0, {}, Math.round(cfg.typing.submitPauseMs));\n    } else if (event.type === 'thinking') {\n      const { scale, minMs, maxMs, multiplier } = cfg.thinking;\n      const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;\n      place('think', Math.round(ms), {}, gap);\n    } else if (event.type === 'text') {\n      const { cps, maxMs, multiplier } = cfg.output;\n      const length = String(event.text === undefined || event.text === null ? '' : event.text).length;\n      place('stream', Math.round(Math.min((length / cps) * 1000, maxMs) * multiplier), {}, gap);\n    } else if (event.type === 'tool_use') {\n      const { scale, minMs, maxMs, multiplier } = cfg.tool;\n      const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;\n      place('tool', Math.round(ms), {}, gap);\n    } else {\n      place('result', 0, {}, gap);\n    }\n  });\n  return { totalMs, segments };\n}\n","export const STYLES = `\n:host{display:block;box-sizing:border-box;width:var(--cr-width,100%);height:var(--cr-height,600px);overflow:hidden}\n:host,:host([theme=\"dark\"]){--cr-bg:#000;--cr-fg:#e8e8e8;--cr-dim:#8a8a8a;--cr-accent:#e0867f;--cr-prompt-bg:#262626;--cr-blue:#7fb2ff;--cr-magenta:#d98cf0;--cr-cyan:#5fd7e6;--cr-cyan-bright:#8ff0ff;--cr-green:#5fd75f;--cr-yellow:#ffd700;--cr-orange:#ff9f43;--cr-red:#ff5f5f;--cr-font:ui-monospace,SFMono-Regular,Menlo,Consolas,\"Liberation Mono\",monospace;--cr-font-size:13px}\n:host([theme=\"light\"]){--cr-bg:#fafafa;--cr-fg:#1f1f1f;--cr-dim:#6b6b6b;--cr-accent:#c9605a;--cr-prompt-bg:#ececec;--cr-blue:#1f5fbf;--cr-magenta:#a63fa6;--cr-cyan:#0b7a8c;--cr-cyan-bright:#0098b0;--cr-green:#1e8a2e;--cr-yellow:#9a7400;--cr-orange:#c25e00;--cr-red:#c62828}\n[hidden]{display:none!important}\n.cr-root{display:flex;flex-direction:column;height:100%;background:var(--cr-bg);color:var(--cr-fg)}\n.cr-screen{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;box-sizing:border-box;padding:6px 8px;overflow:hidden;font-family:var(--cr-font);font-size:var(--cr-font-size);line-height:1.4}\n.cr-probe{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;white-space:pre;font-size:100px}\n.cr-header{display:flex;flex:none;align-items:flex-start;gap:1.2ch;margin-bottom:.7em;white-space:pre}\n.cr-logo{flex:none;width:3.6em;height:2.4em;shape-rendering:crispEdges}\n.cr-logo rect{fill:var(--cr-accent)}\n.cr-history{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--cr-dim) transparent}\n.cr-row{display:flex}\n.cr-history>.cr-row:not(.cr-result){margin-top:.7em}\n.cr-history>:first-child{margin-top:0}\n.cr-prompt{background:var(--cr-prompt-bg)}\n.cr-mark{flex:none;white-space:pre}\n.cr-body{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}\n.cr-block>*+*{margin-top:1.4em}\n.cr-block>.cr-bullet+.cr-bullet{margin-top:0}\n.cr-bullet{padding-left:2ch;text-indent:-2ch}\n.cr-heading{font-weight:bold}\n.cr-code{margin:0;padding:.4em .8ch;background:var(--cr-prompt-bg);font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}\n.cr-body code{color:var(--cr-cyan)}\n.cr-wait{color:var(--cr-dim);animation:cr-blink 1s steps(1) infinite}\n.cr-error{color:var(--cr-red)}\n.cr-input{flex:none;margin-top:.7em}\n.cr-rule{display:flex;align-items:center;color:var(--cr-dim)}\n.cr-rule-line{flex:1;border-top:1px solid var(--cr-dim)}\n.cr-rule-label{flex:none;padding:0 .6ch}\n.cr-rule-tail{flex:none;width:1ch;border-top:1px solid var(--cr-dim)}\n.cr-unlabeled .cr-rule-label,.cr-unlabeled .cr-rule-tail{display:none}\n.cr-input-row{min-height:1.4em}\n.cr-cursor{display:inline-block;width:1ch;height:1.1em;vertical-align:text-bottom;background:var(--cr-fg);animation:cr-blink 1s steps(1) infinite}\n.cr-status,.cr-footer{flex:none;white-space:nowrap;overflow:hidden}\n.cr-status{margin-top:.3em}\n.cr-dim{color:var(--cr-dim)}\n.cr-accent{color:var(--cr-accent)}\n.cr-blue{color:var(--cr-blue)}\n.cr-magenta{color:var(--cr-magenta)}\n.cr-cyan{color:var(--cr-cyan)}\n.cr-cyan-bright{color:var(--cr-cyan-bright)}\n.cr-green{color:var(--cr-green)}\n.cr-yellow{color:var(--cr-yellow)}\n.cr-orange{color:var(--cr-orange)}\n.cr-red{color:var(--cr-red)}\n.cr-controls{display:flex;flex:none;align-items:center;gap:8px;box-sizing:border-box;padding:6px 8px;border-top:1px solid var(--cr-dim);background:var(--cr-bg);color:var(--cr-fg);font:12px/1 ui-monospace,Menlo,Consolas,monospace}\n.cr-btn,.cr-speed{border:1px solid var(--cr-dim);border-radius:4px;background:transparent;color:inherit;font:inherit}\n.cr-btn{padding:4px 8px;cursor:pointer}\n.cr-speed{padding:3px;background:var(--cr-bg)}\n.cr-scrub{flex:1;min-width:0;accent-color:var(--cr-accent)}\n.cr-time{flex:none;color:var(--cr-dim);white-space:nowrap}\n@keyframes cr-blink{0%,49%{opacity:1}50%,100%{opacity:0}}\n`;\n","import { normalizeConfig } from './config.js';\nimport { statusParts, headerLines, footerText, toolLabel, parseMarkdownLite } from './format.js';\nimport { validateTimeline, buildSchedule } from './schedule.js';\nimport { STYLES } from './styles.js';\n\nconst PLAYER_SPEEDS = ['0.5', '1', '1.5', '2', '4'];\nconst PLAYER_GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽'];\nconst PLAYER_SVG_NS = 'http://www.w3.org/2000/svg';\nconst PLAYER_LOGO = [\n  [2, 0, 8, 1],\n  [2, 1, 8, 2],\n  [0, 3, 12, 2],\n  [2, 5, 8, 1],\n  [2, 6, 1, 2],\n  [4, 6, 1, 2],\n  [7, 6, 1, 2],\n  [9, 6, 1, 2],\n];\nconst PLAYER_PAD = 16;\n\nfunction playerEl(tag, className, text) {\n  const node = document.createElement(tag);\n  if (className) node.className = className;\n  if (text !== undefined) node.textContent = text;\n  return node;\n}\n\nfunction playerLogo() {\n  const svg = document.createElementNS(PLAYER_SVG_NS, 'svg');\n  svg.setAttribute('class', 'cr-logo');\n  svg.setAttribute('viewBox', '0 0 12 8');\n  svg.setAttribute('aria-hidden', 'true');\n  for (const [x, y, w, h] of PLAYER_LOGO) {\n    const rect = document.createElementNS(PLAYER_SVG_NS, 'rect');\n    rect.setAttribute('x', x);\n    rect.setAttribute('y', y);\n    rect.setAttribute('width', w);\n    rect.setAttribute('height', h);\n    svg.appendChild(rect);\n  }\n  return svg;\n}\n\nfunction playerRule(labeled) {\n  const node = playerEl('div', 'cr-rule');\n  node.appendChild(playerEl('span', 'cr-rule-line'));\n  const label = playerEl('span', 'cr-rule-label');\n  if (labeled) {\n    node.appendChild(label);\n    node.appendChild(playerEl('span', 'cr-rule-tail'));\n  }\n  return { node, label };\n}\n\nfunction playerClock(ms) {\n  const secs = Math.floor(Math.max(0, ms) / 1000);\n  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;\n}\n\nfunction playerMarkdown(container, text) {\n  container.textContent = '';\n  for (const block of parseMarkdownLite(text)) {\n    if (block.kind === 'code') {\n      container.appendChild(playerEl('pre', 'cr-code', block.text));\n      continue;\n    }\n    const row = playerEl('div', `cr-${block.kind}`);\n    if (block.kind === 'bullet') row.appendChild(playerEl('span', null, '• '));\n    for (const span of block.spans) {\n      const tag = span.kind === 'code' ? 'code' : span.kind === 'bold' ? 'strong' : 'span';\n      row.appendChild(playerEl(tag, null, span.text));\n    }\n    container.appendChild(row);\n  }\n}\n\nexport class ClaudeReplay extends HTMLElement {\n  static get observedAttributes() {\n    return ['src', 'config'];\n  }\n\n  constructor() {\n    super();\n    this._raw = {};\n    this._cfg = normalizeConfig({});\n    this._timeline = null;\n    this._provided = null;\n    this._schedule = null;\n    this._errors = new Map();\n    this._state = 'loading';\n    this._connected = false;\n    this._started = false;\n    this._time = 0;\n    this._last = null;\n    this._raf = 0;\n    this._observer = null;\n    this._loadToken = 0;\n    this._tick = this._tick.bind(this);\n    this._build();\n    this._resetView();\n    this._applyLayout();\n    this._renderChrome();\n  }\n\n  attributeChangedCallback(name, oldValue, value) {\n    if (name === 'config') {\n      let parsed = {};\n      try {\n        parsed = value === null ? {} : JSON.parse(value);\n      } catch {\n        parsed = {};\n      }\n      this._setConfig(parsed);\n    } else if (name === 'src' && this._started && value !== oldValue) {\n      this._provided = null;\n      this._load();\n    }\n  }\n\n  connectedCallback() {\n    this._connected = true;\n    this._applyHost();\n    this._applyFont();\n    this.setAttribute('state', this._state);\n    this._observer = new ResizeObserver(() => this._applyFont());\n    this._observer.observe(this);\n    if (this._state === 'playing' && !this._raf) {\n      this._last = null;\n      this._raf = requestAnimationFrame(this._tick);\n    }\n    if (!this._started) {\n      this._started = true;\n      if (document.readyState === 'loading') {\n        document.addEventListener('DOMContentLoaded', () => this._load(), { once: true });\n      } else {\n        this._load();\n      }\n    }\n  }\n\n  disconnectedCallback() {\n    this._connected = false;\n    cancelAnimationFrame(this._raf);\n    this._raf = 0;\n    if (this._observer) this._observer.disconnect();\n    this._observer = null;\n  }\n\n  get timeline() {\n    return this._timeline;\n  }\n\n  set timeline(value) {\n    if (value === null || value === undefined) return;\n    this._provided = value;\n    this._loadToken++;\n    if (!this._started) return;\n    try {\n      this._setTimeline(value);\n    } catch (error) {\n      this._fail(error);\n    }\n  }\n\n  get config() {\n    return normalizeConfig(this._raw);\n  }\n\n  set config(value) {\n    this._setConfig(value);\n  }\n\n  get duration() {\n    return this._schedule ? this._schedule.totalMs : 0;\n  }\n\n  get currentTime() {\n    return this._time;\n  }\n\n  set currentTime(value) {\n    this.seek(value);\n  }\n\n  play() {\n    if (!this._schedule || this._state === 'playing') return;\n    if (this._time >= this._schedule.totalMs) {\n      this._time = 0;\n      this._sync(0);\n    }\n    this._setState('playing');\n    this._last = null;\n    this._raf = requestAnimationFrame(this._tick);\n  }\n\n  pause() {\n    if (this._state !== 'playing') return;\n    cancelAnimationFrame(this._raf);\n    this._raf = 0;\n    this._setState('paused');\n  }\n\n  restart() {\n    this.seek(0);\n    if (this._state === 'playing') {\n      if (!this._raf) {\n        this._last = null;\n        this._raf = requestAnimationFrame(this._tick);\n      }\n    } else {\n      this.play();\n    }\n  }\n\n  seek(ms) {\n    if (!this._schedule) return;\n    const total = this._schedule.totalMs;\n    this._time = Math.min(total, Math.max(0, Number(ms) || 0));\n    this._sync(this._time);\n    if (this._state === 'ended' && this._time \u003c total) this._setState('paused');\n  }\n\n  _build() {\n    const shadow = this.attachShadow({ mode: 'open' });\n    const root = playerEl('div', 'cr-root');\n    const screen = playerEl('div', 'cr-screen');\n    const probe = playerEl('span', 'cr-probe', '0'.repeat(20));\n    const header = playerEl('div', 'cr-header');\n    const history = playerEl('div', 'cr-history');\n    const input = playerEl('div', 'cr-input');\n    const top = playerRule(true);\n    const bottom = playerRule(false);\n    const inputRow = playerEl('div', 'cr-row cr-input-row');\n    const typed = playerEl('span');\n    const body = playerEl('div', 'cr-body');\n    body.appendChild(typed);\n    body.appendChild(playerEl('span', 'cr-cursor'));\n    inputRow.appendChild(playerEl('span', 'cr-mark', '❯ '));\n    inputRow.appendChild(body);\n    input.appendChild(top.node);\n    input.appendChild(inputRow);\n    input.appendChild(bottom.node);\n    const status = playerEl('div', 'cr-status');\n    const footer = playerEl('div', 'cr-footer');\n    [probe, header, history, input, status, footer].forEach((node) => screen.appendChild(node));\n\n    const controls = playerEl('div', 'cr-controls');\n    const play = playerEl('button', 'cr-btn', '▶');\n    play.type = 'button';\n    const restart = playerEl('button', 'cr-btn', '↺');\n    restart.type = 'button';\n    const scrub = playerEl('input', 'cr-scrub');\n    scrub.type = 'range';\n    scrub.min = '0';\n    scrub.max = '0';\n    scrub.step = '1';\n    scrub.value = '0';\n    const time = playerEl('span', 'cr-time', '0:00 / 0:00');\n    const speed = playerEl('select', 'cr-speed');\n    for (const value of PLAYER_SPEEDS) {\n      const option = playerEl('option', null, `${value}x`);\n      option.value = value;\n      speed.appendChild(option);\n    }\n    [play, restart, scrub, time, speed].forEach((node) => controls.appendChild(node));\n\n    root.appendChild(screen);\n    root.appendChild(controls);\n    shadow.appendChild(playerEl('style', null, STYLES));\n    shadow.appendChild(root);\n\n    play.addEventListener('click', () => (this._state === 'playing' ? this.pause() : this.play()));\n    restart.addEventListener('click', () => this.restart());\n    scrub.addEventListener('input', () => this.seek(Number(scrub.value)));\n    speed.addEventListener('change', () => this._setConfig(Object.assign({}, this._raw, { speed: Number(speed.value) })));\n\n    this._els = {\n      screen,\n      probe,\n      header,\n      history,\n      input,\n      label: top.label,\n      typed,\n      status,\n      footer,\n      controls,\n      play,\n      scrub,\n      time,\n      speed,\n    };\n  }\n\n  _meta() {\n    return (this._timeline && this._timeline.meta) || {};\n  }\n\n  _setConfig(raw) {\n    const prev = this._cfg;\n    this._raw = raw !== null && typeof raw === 'object' ? raw : {};\n    this._cfg = normalizeConfig(this._raw);\n    this._applyLayout();\n    if (!this._schedule) {\n      this._renderChrome();\n      return;\n    }\n    if (JSON.stringify(Object.assign({}, prev, { speed: 0 })) !== JSON.stringify(Object.assign({}, this._cfg, { speed: 0 }))) {\n      this._rebuild();\n    }\n  }\n\n  _applyHost() {\n    if (!this._connected) return;\n    this.style.setProperty('--cr-width', this._cfg.width);\n    this.style.setProperty('--cr-height', this._cfg.height);\n    this.setAttribute('theme', this._cfg.theme);\n  }\n\n  _applyLayout() {\n    const els = this._els;\n    els.controls.hidden = !this._cfg.controls;\n    els.screen.style.setProperty('--cr-font', this._cfg.fontFamily);\n    this._applyFont();\n    const value = String(this._cfg.speed);\n    if (!Array.from(els.speed.options).some((option) => option.value === value)) {\n      const option = playerEl('option', null, `${value}x`);\n      option.value = value;\n      els.speed.appendChild(option);\n    }\n    els.speed.value = value;\n    this._applyHost();\n  }\n\n  _applyFont() {\n    const cfg = this._cfg;\n    let px = cfg.fontSize * cfg.scale;\n    if (cfg.fit === 'width' && this._connected) {\n      const ratio = this._els.probe.getBoundingClientRect().width / 2000;\n      const room = this.clientWidth - PLAYER_PAD;\n      if (ratio > 0 && room > 0) px = room / (cfg.columns * ratio);\n    }\n    this._els.screen.style.setProperty('--cr-font-size', `${Math.max(1, px)}px`);\n  }\n\n  _renderChrome() {\n    const meta = this._meta();\n    const { header, label, input, footer } = this._els;\n    header.textContent = '';\n    header.hidden = !this._cfg.header.show;\n    if (this._cfg.header.show) {\n      const [first, second, third] = headerLines(meta, this._cfg);\n      const info = playerEl('div');\n      const title = playerEl('div');\n      const name = 'Claude Code';\n      if (first.startsWith(name)) {\n        title.appendChild(playerEl('strong', null, name));\n        title.appendChild(playerEl('span', 'cr-dim', first.slice(name.length)));\n      } else {\n        title.textContent = first;\n      }\n      info.appendChild(title);\n      info.appendChild(playerEl('div', 'cr-dim', second));\n      info.appendChild(playerEl('div', 'cr-dim', third));\n      header.appendChild(playerLogo());\n      header.appendChild(info);\n    }\n    label.textContent = meta.agent || '';\n    input.classList.toggle('cr-unlabeled', !meta.agent);\n    footer.textContent = '';\n    const text = footerText(meta.permissionMode);\n    const cut = text.indexOf(' (');\n    const main = cut \u003c 0 ? text : text.slice(0, cut);\n    footer.appendChild(playerEl('span', text.startsWith('?') ? 'cr-dim' : 'cr-accent', main));\n    if (cut >= 0) footer.appendChild(playerEl('span', 'cr-dim', text.slice(cut)));\n    this._renderStatus();\n  }\n\n  _renderStatus() {\n    const p = statusParts(this._meta(), this._cfg, this._live);\n    const node = this._els.status;\n    node.textContent = '';\n    const add = (className, text) => node.appendChild(playerEl('span', className, text));\n    if (p.project) add('cr-blue', `${p.project} `);\n    add('cr-magenta', `(${p.branch})`);\n    add('cr-dim', ' | ');\n    add('cr-cyan', p.model);\n    if (p.effort) {\n      add('cr-dim', ' · ');\n      add('cr-cyan-bright', p.effort);\n    }\n    add('cr-dim', ' | ');\n    add(`cr-${p.tier}`, `${p.bar} ${p.pct}%`);\n    add('cr-dim', ` of ${p.size}`);\n    add('cr-dim', ' | ⏱ ');\n    add(null, p.duration);\n    add('cr-dim', ' | ⟳ ');\n    add(null, String(p.compactions));\n  }\n\n  _resetView() {\n    this._els.history.textContent = '';\n    this._els.typed.textContent = '';\n    this._next = 0;\n    this._open = null;\n    this._at = 0;\n    this._tools = new Map();\n    this._live = { contextTokens: 0, sessionMs: 0 };\n    this._statusDirty = false;\n    this._scrollDirty = false;\n    this._renderStatus();\n  }\n\n  _row(className, mark, text) {\n    const row = playerEl('div', `cr-row ${className}`);\n    const markNode = playerEl('span', 'cr-mark', mark);\n    const body = playerEl('div', 'cr-body', text);\n    row.appendChild(markNode);\n    row.appendChild(body);\n    this._els.history.appendChild(row);\n    this._scrollDirty = true;\n    return { row, mark: markNode, body };\n  }\n\n  _setState(state) {\n    if (this._state === state) return;\n    this._state = state;\n    if (this._connected) this.setAttribute('state', state);\n    this._syncControls();\n    this.dispatchEvent(new CustomEvent('statechange', { detail: { state } }));\n  }\n\n  _syncControls() {\n    const els = this._els;\n    const total = this.duration;\n    els.scrub.max = String(total);\n    els.scrub.value = String(Math.round(this._time));\n    els.time.textContent = `${playerClock(this._time)} / ${playerClock(total)}`;\n    els.play.textContent = this._state === 'playing' ? '❚❚' : '▶';\n  }\n\n  async _load() {\n    const token = ++this._loadToken;\n    try {\n      let data = this._provided;\n      if (!data) {\n        const script = this.querySelector('script[data-timeline]');\n        const src = this.getAttribute('src');\n        if (script) {\n          data = JSON.parse(script.textContent);\n        } else if (src) {\n          this._setState('loading');\n          const response = await fetch(src);\n          if (!response.ok) throw new Error(`HTTP ${response.status} ${src}`);\n          data = await response.json();\n        } else {\n          return;\n        }\n      }\n      if (token !== this._loadToken) return;\n      this._setTimeline(data);\n    } catch (error) {\n      if (token === this._loadToken) this._fail(error);\n    }\n  }\n\n  _setTimeline(data) {\n    validateTimeline(data);\n    cancelAnimationFrame(this._raf);\n    this._raf = 0;\n    this._timeline = data;\n    this._errors = new Map(\n      data.events.filter((event) => event.type === 'tool_result').map((event) => [event.toolUseId, event.isError === true]),\n    );\n    this._schedule = null;\n    this._time = 0;\n    this._last = null;\n    this._rebuild();\n    this._setState('ready');\n    if (this._cfg.autoplay) this.play();\n  }\n\n  _fail(error) {\n    cancelAnimationFrame(this._raf);\n    this._raf = 0;\n    this._timeline = null;\n    this._schedule = null;\n    this._time = 0;\n    this._setState('error');\n    this._resetView();\n    this._renderChrome();\n    this._row('cr-error', '', `Failed to load timeline: ${error && error.message ? error.message : String(error)}`);\n    this._syncControls();\n  }\n\n  _rebuild() {\n    const oldTotal = this._schedule ? this._schedule.totalMs : 0;\n    const ratio = oldTotal > 0 ? this._time / oldTotal : 0;\n    this._schedule = buildSchedule(this._timeline, this._cfg);\n    this._time = ratio * this._schedule.totalMs;\n    this._resetView();\n    this._renderChrome();\n    this._sync(this._time);\n  }\n\n  _tick(now) {\n    this._raf = 0;\n    if (this._state !== 'playing' || !this._schedule) return;\n    const total = this._schedule.totalMs;\n    if (this._last !== null) this._time += (now - this._last) * this._cfg.speed;\n    this._last = now;\n    if (this._time >= total) {\n      this._time = total;\n      this._sync(total);\n      if (this._cfg.loop && total > 0) this.restart();\n      else this._setState('ended');\n      return;\n    }\n    this._sync(this._time);\n    this._raf = requestAnimationFrame(this._tick);\n  }\n\n  _sync(t) {\n    if (!this._schedule) return;\n    if (t \u003c this._at) this._resetView();\n    this._at = t;\n    const segments = this._schedule.segments;\n    if (this._open && t >= this._open.seg.end) {\n      this._finish(this._open);\n      this._open = null;\n    }\n    while (!this._open && this._next \u003c segments.length && segments[this._next].start \u003c= t) {\n      const open = this._begin(segments[this._next++]);\n      if (t >= open.seg.end) this._finish(open);\n      else this._open = open;\n    }\n    if (this._open) this._progress(this._open, t);\n    if (this._statusDirty) {\n      this._renderStatus();\n      this._statusDirty = false;\n    }\n    if (this._scrollDirty) {\n      this._els.history.scrollTop = this._els.history.scrollHeight;\n      this._scrollDirty = false;\n    }\n    this._syncControls();\n  }\n\n  _settle(tool, isError) {\n    tool.mark.className = `cr-mark ${isError ? 'cr-red' : 'cr-green'}`;\n  }\n\n  _begin(seg) {\n    const ev = this._timeline.events[seg.eventIndex];\n    const open = { seg, ev, row: null, shown: -1 };\n    if (Number.isFinite(seg.contextTokens)) this._live.contextTokens = seg.contextTokens;\n    this._live.sessionMs = seg.sessionMs;\n    this._statusDirty = true;\n    if (seg.kind === 'type') {\n      this._els.typed.textContent = '';\n    } else if (seg.kind === 'submit') {\n      this._els.typed.textContent = '';\n      this._row('cr-prompt', '❯ ', String(ev.text ?? ''));\n    } else if (seg.kind === 'think') {\n      open.row = this._row('cr-think', '✻ ', 'Thinking…');\n    } else if (seg.kind === 'stream') {\n      open.row = this._row('cr-text', '⏺ ', '');\n      open.row.body.classList.add('cr-block');\n    } else if (seg.kind === 'tool') {\n      open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));\n      open.row.mark.classList.add('cr-wait');\n      this._tools.set(ev.id, open.row);\n    } else if (seg.kind === 'result') {\n      const tool = this._tools.get(ev.toolUseId);\n      if (tool) this._settle(tool, ev.isError === true);\n      const lines = (ev.lines || []).slice(0, this._cfg.results.lines).map((text) => ({ text, dim: false }));\n      const hidden = Math.max(0, (Number(ev.totalLines) || 0) - lines.length);\n      if (hidden > 0) lines.push({ text: `… +${hidden} line${hidden === 1 ? '' : 's'} (ctrl+o to expand)`, dim: true });\n      if (lines.length === 0) lines.push({ text: '(No content)', dim: true });\n      lines.forEach((line, i) => {\n        const tone = ev.isError === true && !line.dim ? ' cr-red' : line.dim ? ' cr-dim' : '';\n        this._row(`cr-result${tone}`, i === 0 ? '  ⎿  ' : '     ', line.text);\n      });\n    }\n    return open;\n  }\n\n  _progress(open, t) {\n    const { seg, ev } = open;\n    const elapsed = t - seg.start;\n    if (seg.kind === 'type') {\n      const times = seg.charTimes;\n      let count = 0;\n      while (count \u003c times.length && times[count] \u003c= elapsed) count++;\n      if (count !== open.shown) {\n        open.shown = count;\n        this._els.typed.textContent = String(ev.text ?? '').slice(0, count);\n      }\n    } else if (seg.kind === 'think') {\n      const index = Math.floor(elapsed / 120) % PLAYER_GLYPHS.length;\n      if (index !== open.shown) {\n        open.shown = index;\n        open.row.mark.textContent = `${PLAYER_GLYPHS[index]} `;\n      }\n    } else if (seg.kind === 'stream') {\n      const text = String(ev.text ?? '');\n      const count = Math.floor(text.length * Math.min(1, elapsed / (seg.end - seg.start)));\n      if (count !== open.shown) {\n        open.shown = count;\n        playerMarkdown(open.row.body, text.slice(0, count));\n        this._scrollDirty = true;\n      }\n    }\n  }\n\n  _finish(open) {\n    const { seg, ev } = open;\n    if (seg.kind === 'type') {\n      this._els.typed.textContent = String(ev.text ?? '');\n    } else if (seg.kind === 'think') {\n      const secs = Math.max(0, Math.round((Number(ev.durationMs) || 0) / 1000));\n      open.row.mark.textContent = '∴ ';\n      open.row.body.textContent = `Thought for ${secs}s`;\n      open.row.row.classList.add('cr-dim');\n    } else if (seg.kind === 'stream') {\n      playerMarkdown(open.row.body, String(ev.text ?? ''));\n      this._scrollDirty = true;\n    } else if (seg.kind === 'tool' && !this._cfg.results.show) {\n      this._settle(open.row, this._errors.get(ev.id) === true);\n    }\n  }\n}\n\nif (!customElements.get('claude-replay')) customElements.define('claude-replay', ClaudeReplay);\n"]</script>
+<script type="module">
+const CONFIG_LENGTH = /^(auto|0|\d+(\.\d+)?(px|%|em|rem|vh|vw|vmin|vmax|ch|pt))$/;
+const CONFIG_FONT = /^[^;{}<>\\]+$/;
+
+const CONFIG_STRING_CHECKS = {
+  width: (v) => CONFIG_LENGTH.test(v),
+  height: (v) => CONFIG_LENGTH.test(v),
+  fit: (v) => v === 'none' || v === 'width',
+  theme: (v) => v === 'dark' || v === 'light',
+  fontFamily: (v) => CONFIG_FONT.test(v),
+};
+
+const CONFIG_MS = [0, 600000];
+const CONFIG_MULTIPLIER = [0.05, 20];
+
+const CONFIG_RANGES = {
+  columns: [40, 300, true],
+  fontSize: [6, 48],
+  scale: [0.25, 4],
+  seed: [-2147483648, 2147483647, true],
+  speed: [0.1, 20],
+  gapMs: [0, 5000],
+  typing: {
+    cps: [1, 100000],
+    jitter: [0, 0.9],
+    punctuationPauseMs: CONFIG_MS,
+    maxMs: CONFIG_MS,
+    submitPauseMs: CONFIG_MS,
+    multiplier: CONFIG_MULTIPLIER,
+  },
+  thinking: { scale: [0, 100], minMs: CONFIG_MS, maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },
+  tool: { scale: [0, 100], minMs: CONFIG_MS, maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },
+  output: { cps: [1, 100000], maxMs: CONFIG_MS, multiplier: CONFIG_MULTIPLIER },
+  results: { lines: [0, 50, true] },
+  status: { contextWindow: [1000, 1000000000, true], compactions: [0, 1000000, true] },
+};
+
+function configDeepFreeze(value) {
+  if (value && typeof value === 'object') {
+    Object.values(value).forEach(configDeepFreeze);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+const DEFAULT_CONFIG = configDeepFreeze({
+  width: '100%',
+  height: '600px',
+  fit: 'none',
+  columns: 100,
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+  fontSize: 13,
+  scale: 1,
+  theme: 'dark',
+  autoplay: true,
+  loop: false,
+  controls: true,
+  seed: 1,
+  speed: 1,
+  turns: null,
+  gapMs: 150,
+  typing: { cps: 28, jitter: 0.35, punctuationPauseMs: 120, maxMs: 6000, submitPauseMs: 350, multiplier: 1 },
+  thinking: { scale: 0.25, minMs: 800, maxMs: 4000, multiplier: 1 },
+  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1 },
+  output: { cps: 600, maxMs: 2500, multiplier: 1 },
+  results: { show: true, lines: 3 },
+  header: { show: true, billing: null },
+  status: { project: null, branch: null, model: null, effort: null, contextWindow: 1000000, compactions: 0 },
+});
+
+function configIsObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function configNumber(value, fallback, range) {
+  const n =
+    typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  const clamped = Math.min(range[1], Math.max(range[0], n));
+  return range[2] ? Math.round(clamped) : clamped;
+}
+
+function configTurns(value) {
+  if (!Array.isArray(value) || value.length !== 2) return null;
+  const pair = value.map((v) => configNumber(v, NaN, [1, Number.MAX_SAFE_INTEGER, true]));
+  return Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && pair[0] <= pair[1] ? pair : null;
+}
+
+function configField(key, fallback, value, range) {
+  if (typeof fallback === 'number') return configNumber(value, fallback, range);
+  if (typeof fallback === 'boolean') return typeof value === 'boolean' ? value : fallback;
+  if (key === 'turns') return configTurns(value);
+  if (fallback === null) return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+  const check = CONFIG_STRING_CHECKS[key];
+  return typeof value === 'string' && check(value.trim()) ? value.trim() : fallback;
+}
+
+function normalizeConfig(partial) {
+  try {
+    const input = configIsObject(partial) ? partial : {};
+    const out = {};
+    for (const key of Object.keys(DEFAULT_CONFIG)) {
+      const fallback = DEFAULT_CONFIG[key];
+      if (configIsObject(fallback)) {
+        const given = configIsObject(input[key]) ? input[key] : {};
+        const ranges = CONFIG_RANGES[key] || {};
+        out[key] = {};
+        for (const sub of Object.keys(fallback)) {
+          out[key][sub] = configField(sub, fallback[sub], given[sub], ranges[sub]);
+        }
+      } else {
+        out[key] = configField(key, fallback, input[key], CONFIG_RANGES[key]);
+      }
+    }
+    return out;
+  } catch {
+    return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }
+}
+
+const FORMAT_FOOTERS = {
+  bypassPermissions: '⏵⏵ bypass permissions on (shift+tab to cycle)',
+  acceptEdits: '⏵⏵ accept edits on (shift+tab to cycle)',
+  plan: '⏸ plan mode on (shift+tab to cycle)',
+};
+
+function contextPercent(tokens, total) {
+  const t = Number(tokens);
+  const w = Number(total);
+  if (!(t > 0) || !(w > 0)) return 0;
+  return Math.min(100, Math.floor((t * 100) / w));
+}
+
+function contextBar(pct) {
+  const filled = Math.min(10, Math.max(0, Math.floor(Number(pct) / 10) || 0));
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
+function contextTier(pct) {
+  if (pct < 30) return 'green';
+  if (pct < 50) return 'yellow';
+  if (pct < 75) return 'orange';
+  return 'red';
+}
+
+function formatWindowSize(n) {
+  return n >= 1000000 ? `${Math.floor(n / 1000000)}M` : `${Math.floor(n / 1000)}k`;
+}
+
+function formatDuration(ms) {
+  const secs = Math.max(0, Math.floor(Number(ms) / 1000) || 0);
+  if (secs >= 3600) {
+    const minutes = Math.floor((secs % 3600) / 60);
+    return `${Math.floor(secs / 3600)}h ${String(minutes).padStart(2, '0')}m`;
+  }
+  if (secs >= 60) return `${Math.floor(secs / 60)}m`;
+  return `${secs}s`;
+}
+
+function formatPick(override, value, fallback) {
+  if (override !== null && override !== undefined && override !== '') return override;
+  if (value !== null && value !== undefined && value !== '') return value;
+  return fallback;
+}
+
+function statusParts(meta, config, live) {
+  const m = meta || {};
+  const s = (config && config.status) || {};
+  const l = live || {};
+  const contextSize = s.contextWindow;
+  const pct = contextPercent(l.contextTokens, contextSize);
+  return {
+    project: formatPick(s.project, m.project, ''),
+    branch: formatPick(s.branch, m.branch, 'N/A'),
+    model: formatPick(s.model, m.model, ''),
+    effort: formatPick(s.effort, m.effort, null),
+    bar: contextBar(pct),
+    pct,
+    tier: contextTier(pct),
+    size: formatWindowSize(contextSize),
+    duration: formatDuration(l.sessionMs),
+    compactions: s.compactions,
+  };
+}
+
+function headerLines(meta, config) {
+  const m = meta || {};
+  const billing = config && config.header ? config.header.billing : null;
+  const version = m.claudeVersion ? `Claude Code v${m.claudeVersion}` : 'Claude Code';
+  const model = m.model || 'Claude';
+  let second = m.effort ? `${model} with ${m.effort} effort` : model;
+  if (billing) second += ` · ${billing}`;
+  const third = `${m.agent ? `@${m.agent} · ` : ''}${m.cwd || ''}`;
+  return [version, second, third];
+}
+
+function footerText(permissionMode) {
+  return FORMAT_FOOTERS[permissionMode] || '? for shortcuts';
+}
+
+function toolLabel(event) {
+  return `${event.name}(${event.summary === undefined || event.summary === null ? '' : event.summary})`;
+}
+
+function formatSpans(text) {
+  const spans = [];
+  const pattern = /`([^`\n]+)`|\*\*([^\n]+?)\*\*/g;
+  let last = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) spans.push({ kind: 'text', text: text.slice(last, match.index) });
+    spans.push(match[1] !== undefined ? { kind: 'code', text: match[1] } : { kind: 'bold', text: match[2] });
+    last = pattern.lastIndex;
+  }
+  if (last < text.length) spans.push({ kind: 'text', text: text.slice(last) });
+  return spans;
+}
+
+function parseMarkdownLite(text) {
+  const lines = String(text === undefined || text === null ? '' : text).split(/\r?\n/);
+  const blocks = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) blocks.push({ kind: 'para', spans: formatSpans(para.join('\n')) });
+    para = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = /^\s*```(\S*)\s*$/.exec(line);
+    if (fence) {
+      flush();
+      const body = [];
+      i++;
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) body.push(lines[i++]);
+      blocks.push({ kind: 'code', lang: fence[1], text: body.join('\n') });
+      continue;
+    }
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      flush();
+      blocks.push({ kind: 'heading', level: heading[1].length, spans: formatSpans(heading[2]) });
+      continue;
+    }
+    const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
+    if (bullet) {
+      flush();
+      blocks.push({ kind: 'bullet', spans: formatSpans(bullet[1]) });
+      continue;
+    }
+    if (line.trim() === '') flush();
+    else para.push(line);
+  }
+  flush();
+  return blocks;
+}
+
+
+
+const SCHEDULE_TYPES = ['prompt', 'thinking', 'text', 'tool_use', 'tool_result'];
+const SCHEDULE_PUNCTUATION = '.,;:?!';
+
+function validateTimeline(obj) {
+  if (obj === null || typeof obj !== 'object') throw new Error('timeline: expected an object');
+  if (obj.version !== 1) throw new Error(`version: expected 1, got ${JSON.stringify(obj.version)}`);
+  if (!Array.isArray(obj.events)) throw new Error('events: expected an array');
+  obj.events.forEach((event, i) => {
+    if (event === null || typeof event !== 'object' || !SCHEDULE_TYPES.includes(event.type)) {
+      const got = event === null || typeof event !== 'object' ? typeof event : JSON.stringify(event.type);
+      throw new Error(`events[${i}].type: unknown type ${got}`);
+    }
+  });
+  return obj;
+}
+
+function scheduleMulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function scheduleClamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function scheduleNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function scheduleTyping(text, typing, rng) {
+  const base = 1000 / typing.cps;
+  const delays = [];
+  let sum = 0;
+  for (let i = 0; i < text.length; i++) {
+    let delay = base * (1 + typing.jitter * (2 * rng() - 1));
+    if (SCHEDULE_PUNCTUATION.includes(text[i])) delay += typing.punctuationPauseMs;
+    delays.push(delay);
+    sum += delay;
+  }
+  const factor = (sum > typing.maxMs ? typing.maxMs / sum : 1) * typing.multiplier;
+  const duration = Math.round(sum * factor);
+  let acc = 0;
+  const charTimes = delays.map((delay) => {
+    acc += delay * factor;
+    return Math.min(duration, Math.round(acc));
+  });
+  return { duration, charTimes };
+}
+
+function buildSchedule(timeline, config) {
+  const cfg = normalizeConfig(config);
+  const events = timeline && Array.isArray(timeline.events) ? timeline.events : [];
+  const rng = scheduleMulberry32(cfg.seed);
+  const gap = Math.round(cfg.gapMs);
+  const segments = [];
+  let cursor = 0;
+  let totalMs = 0;
+  events.forEach((event, eventIndex) => {
+    if (cfg.turns) {
+      const turn = Number(event.turn);
+      if (!(turn >= cfg.turns[0] && turn <= cfg.turns[1])) return;
+    }
+    if (event.type === 'tool_result' && !cfg.results.show) return;
+    const place = (kind, duration, extra, pause) => {
+      const segment = {
+        kind,
+        start: cursor,
+        end: cursor + duration,
+        eventIndex,
+        turn: scheduleNumber(event.turn),
+        sessionMs: scheduleNumber(event.t),
+      };
+      if (Number.isFinite(event.contextTokens)) segment.contextTokens = event.contextTokens;
+      segments.push(Object.assign(segment, extra));
+      totalMs = Math.max(totalMs, segment.end);
+      cursor = segment.end + pause;
+    };
+    if (event.type === 'prompt') {
+      const typed = scheduleTyping(String(event.text === undefined || event.text === null ? '' : event.text), cfg.typing, rng);
+      place('type', typed.duration, { charTimes: typed.charTimes }, 0);
+      place('submit', 0, {}, Math.round(cfg.typing.submitPauseMs));
+    } else if (event.type === 'thinking') {
+      const { scale, minMs, maxMs, multiplier } = cfg.thinking;
+      const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;
+      place('think', Math.round(ms), {}, gap);
+    } else if (event.type === 'text') {
+      const { cps, maxMs, multiplier } = cfg.output;
+      const length = String(event.text === undefined || event.text === null ? '' : event.text).length;
+      place('stream', Math.round(Math.min((length / cps) * 1000, maxMs) * multiplier), {}, gap);
+    } else if (event.type === 'tool_use') {
+      const { scale, minMs, maxMs, multiplier } = cfg.tool;
+      const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;
+      place('tool', Math.round(ms), {}, gap);
+    } else {
+      place('result', 0, {}, gap);
+    }
+  });
+  return { totalMs, segments };
+}
+
+const STYLES = `
+:host{display:block;box-sizing:border-box;width:var(--cr-width,100%);height:var(--cr-height,600px);overflow:hidden}
+:host,:host([theme="dark"]){--cr-bg:#000;--cr-fg:#e8e8e8;--cr-dim:#8a8a8a;--cr-accent:#e0867f;--cr-prompt-bg:#262626;--cr-blue:#7fb2ff;--cr-magenta:#d98cf0;--cr-cyan:#5fd7e6;--cr-cyan-bright:#8ff0ff;--cr-green:#5fd75f;--cr-yellow:#ffd700;--cr-orange:#ff9f43;--cr-red:#ff5f5f;--cr-font:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;--cr-font-size:13px}
+:host([theme="light"]){--cr-bg:#fafafa;--cr-fg:#1f1f1f;--cr-dim:#6b6b6b;--cr-accent:#c9605a;--cr-prompt-bg:#ececec;--cr-blue:#1f5fbf;--cr-magenta:#a63fa6;--cr-cyan:#0b7a8c;--cr-cyan-bright:#0098b0;--cr-green:#1e8a2e;--cr-yellow:#9a7400;--cr-orange:#c25e00;--cr-red:#c62828}
+[hidden]{display:none!important}
+.cr-root{display:flex;flex-direction:column;height:100%;background:var(--cr-bg);color:var(--cr-fg)}
+.cr-screen{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;box-sizing:border-box;padding:6px 8px;overflow:hidden;font-family:var(--cr-font);font-size:var(--cr-font-size);line-height:1.4}
+.cr-probe{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;white-space:pre;font-size:100px}
+.cr-header{display:flex;flex:none;align-items:flex-start;gap:1.2ch;margin-bottom:.7em;white-space:pre}
+.cr-logo{flex:none;width:3.6em;height:2.4em;shape-rendering:crispEdges}
+.cr-logo rect{fill:var(--cr-accent)}
+.cr-history{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--cr-dim) transparent}
+.cr-row{display:flex}
+.cr-history>.cr-row:not(.cr-result){margin-top:.7em}
+.cr-history>:first-child{margin-top:0}
+.cr-prompt{background:var(--cr-prompt-bg)}
+.cr-mark{flex:none;white-space:pre}
+.cr-body{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.cr-block>*+*{margin-top:1.4em}
+.cr-block>.cr-bullet+.cr-bullet{margin-top:0}
+.cr-bullet{padding-left:2ch;text-indent:-2ch}
+.cr-heading{font-weight:bold}
+.cr-code{margin:0;padding:.4em .8ch;background:var(--cr-prompt-bg);font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+.cr-body code{color:var(--cr-cyan)}
+.cr-wait{color:var(--cr-dim);animation:cr-blink 1s steps(1) infinite}
+.cr-error{color:var(--cr-red)}
+.cr-input{flex:none;margin-top:.7em}
+.cr-rule{display:flex;align-items:center;color:var(--cr-dim)}
+.cr-rule-line{flex:1;border-top:1px solid var(--cr-dim)}
+.cr-rule-label{flex:none;padding:0 .6ch}
+.cr-rule-tail{flex:none;width:1ch;border-top:1px solid var(--cr-dim)}
+.cr-unlabeled .cr-rule-label,.cr-unlabeled .cr-rule-tail{display:none}
+.cr-input-row{min-height:1.4em}
+.cr-cursor{display:inline-block;width:1ch;height:1.1em;vertical-align:text-bottom;background:var(--cr-fg);animation:cr-blink 1s steps(1) infinite}
+.cr-status,.cr-footer{flex:none;white-space:nowrap;overflow:hidden}
+.cr-status{margin-top:.3em}
+.cr-dim{color:var(--cr-dim)}
+.cr-accent{color:var(--cr-accent)}
+.cr-blue{color:var(--cr-blue)}
+.cr-magenta{color:var(--cr-magenta)}
+.cr-cyan{color:var(--cr-cyan)}
+.cr-cyan-bright{color:var(--cr-cyan-bright)}
+.cr-green{color:var(--cr-green)}
+.cr-yellow{color:var(--cr-yellow)}
+.cr-orange{color:var(--cr-orange)}
+.cr-red{color:var(--cr-red)}
+.cr-controls{display:flex;flex:none;align-items:center;gap:8px;box-sizing:border-box;padding:6px 8px;border-top:1px solid var(--cr-dim);background:var(--cr-bg);color:var(--cr-fg);font:12px/1 ui-monospace,Menlo,Consolas,monospace}
+.cr-btn,.cr-speed{border:1px solid var(--cr-dim);border-radius:4px;background:transparent;color:inherit;font:inherit}
+.cr-btn{padding:4px 8px;cursor:pointer}
+.cr-speed{padding:3px;background:var(--cr-bg)}
+.cr-scrub{flex:1;min-width:0;accent-color:var(--cr-accent)}
+.cr-time{flex:none;color:var(--cr-dim);white-space:nowrap}
+@keyframes cr-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+`;
+
+
+
+
+
+
+const PLAYER_SPEEDS = ['0.5', '1', '1.5', '2', '4'];
+const PLAYER_GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽'];
+const PLAYER_SVG_NS = 'http://www.w3.org/2000/svg';
+const PLAYER_LOGO = [
+  [2, 0, 8, 1],
+  [2, 1, 8, 2],
+  [0, 3, 12, 2],
+  [2, 5, 8, 1],
+  [2, 6, 1, 2],
+  [4, 6, 1, 2],
+  [7, 6, 1, 2],
+  [9, 6, 1, 2],
+];
+const PLAYER_PAD = 16;
+
+function playerEl(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function playerLogo() {
+  const svg = document.createElementNS(PLAYER_SVG_NS, 'svg');
+  svg.setAttribute('class', 'cr-logo');
+  svg.setAttribute('viewBox', '0 0 12 8');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const [x, y, w, h] of PLAYER_LOGO) {
+    const rect = document.createElementNS(PLAYER_SVG_NS, 'rect');
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', h);
+    svg.appendChild(rect);
+  }
+  return svg;
+}
+
+function playerRule(labeled) {
+  const node = playerEl('div', 'cr-rule');
+  node.appendChild(playerEl('span', 'cr-rule-line'));
+  const label = playerEl('span', 'cr-rule-label');
+  if (labeled) {
+    node.appendChild(label);
+    node.appendChild(playerEl('span', 'cr-rule-tail'));
+  }
+  return { node, label };
+}
+
+function playerClock(ms) {
+  const secs = Math.floor(Math.max(0, ms) / 1000);
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+function playerMarkdown(container, text) {
+  container.textContent = '';
+  for (const block of parseMarkdownLite(text)) {
+    if (block.kind === 'code') {
+      container.appendChild(playerEl('pre', 'cr-code', block.text));
+      continue;
+    }
+    const row = playerEl('div', `cr-${block.kind}`);
+    if (block.kind === 'bullet') row.appendChild(playerEl('span', null, '• '));
+    for (const span of block.spans) {
+      const tag = span.kind === 'code' ? 'code' : span.kind === 'bold' ? 'strong' : 'span';
+      row.appendChild(playerEl(tag, null, span.text));
+    }
+    container.appendChild(row);
+  }
+}
+
+class ClaudeReplay extends HTMLElement {
+  static get observedAttributes() {
+    return ['src', 'config'];
+  }
+
+  constructor() {
+    super();
+    this._raw = {};
+    this._cfg = normalizeConfig({});
+    this._timeline = null;
+    this._provided = null;
+    this._schedule = null;
+    this._errors = new Map();
+    this._state = 'loading';
+    this._connected = false;
+    this._started = false;
+    this._time = 0;
+    this._last = null;
+    this._raf = 0;
+    this._observer = null;
+    this._loadToken = 0;
+    this._tick = this._tick.bind(this);
+    this._build();
+    this._resetView();
+    this._applyLayout();
+    this._renderChrome();
+  }
+
+  attributeChangedCallback(name, oldValue, value) {
+    if (name === 'config') {
+      let parsed = {};
+      try {
+        parsed = value === null ? {} : JSON.parse(value);
+      } catch {
+        parsed = {};
+      }
+      this._setConfig(parsed);
+    } else if (name === 'src' && this._started && value !== oldValue) {
+      this._provided = null;
+      this._load();
+    }
+  }
+
+  connectedCallback() {
+    this._connected = true;
+    this._applyHost();
+    this._applyFont();
+    this.setAttribute('state', this._state);
+    this._observer = new ResizeObserver(() => this._applyFont());
+    this._observer.observe(this);
+    if (this._state === 'playing' && !this._raf) {
+      this._last = null;
+      this._raf = requestAnimationFrame(this._tick);
+    }
+    if (!this._started) {
+      this._started = true;
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this._load(), { once: true });
+      } else {
+        this._load();
+      }
+    }
+  }
+
+  disconnectedCallback() {
+    this._connected = false;
+    cancelAnimationFrame(this._raf);
+    this._raf = 0;
+    if (this._observer) this._observer.disconnect();
+    this._observer = null;
+  }
+
+  get timeline() {
+    return this._timeline;
+  }
+
+  set timeline(value) {
+    if (value === null || value === undefined) return;
+    this._provided = value;
+    this._loadToken++;
+    if (!this._started) return;
+    try {
+      this._setTimeline(value);
+    } catch (error) {
+      this._fail(error);
+    }
+  }
+
+  get config() {
+    return normalizeConfig(this._raw);
+  }
+
+  set config(value) {
+    this._setConfig(value);
+  }
+
+  get duration() {
+    return this._schedule ? this._schedule.totalMs : 0;
+  }
+
+  get currentTime() {
+    return this._time;
+  }
+
+  set currentTime(value) {
+    this.seek(value);
+  }
+
+  play() {
+    if (!this._schedule || this._state === 'playing') return;
+    if (this._time >= this._schedule.totalMs) {
+      this._time = 0;
+      this._sync(0);
+    }
+    this._setState('playing');
+    this._last = null;
+    this._raf = requestAnimationFrame(this._tick);
+  }
+
+  pause() {
+    if (this._state !== 'playing') return;
+    cancelAnimationFrame(this._raf);
+    this._raf = 0;
+    this._setState('paused');
+  }
+
+  restart() {
+    this.seek(0);
+    if (this._state === 'playing') {
+      if (!this._raf) {
+        this._last = null;
+        this._raf = requestAnimationFrame(this._tick);
+      }
+    } else {
+      this.play();
+    }
+  }
+
+  seek(ms) {
+    if (!this._schedule) return;
+    const total = this._schedule.totalMs;
+    this._time = Math.min(total, Math.max(0, Number(ms) || 0));
+    this._sync(this._time);
+    if (this._state === 'ended' && this._time < total) this._setState('paused');
+  }
+
+  _build() {
+    const shadow = this.attachShadow({ mode: 'open' });
+    const root = playerEl('div', 'cr-root');
+    const screen = playerEl('div', 'cr-screen');
+    const probe = playerEl('span', 'cr-probe', '0'.repeat(20));
+    const header = playerEl('div', 'cr-header');
+    const history = playerEl('div', 'cr-history');
+    const input = playerEl('div', 'cr-input');
+    const top = playerRule(true);
+    const bottom = playerRule(false);
+    const inputRow = playerEl('div', 'cr-row cr-input-row');
+    const typed = playerEl('span');
+    const body = playerEl('div', 'cr-body');
+    body.appendChild(typed);
+    body.appendChild(playerEl('span', 'cr-cursor'));
+    inputRow.appendChild(playerEl('span', 'cr-mark', '❯ '));
+    inputRow.appendChild(body);
+    input.appendChild(top.node);
+    input.appendChild(inputRow);
+    input.appendChild(bottom.node);
+    const status = playerEl('div', 'cr-status');
+    const footer = playerEl('div', 'cr-footer');
+    [probe, header, history, input, status, footer].forEach((node) => screen.appendChild(node));
+
+    const controls = playerEl('div', 'cr-controls');
+    const play = playerEl('button', 'cr-btn', '▶');
+    play.type = 'button';
+    const restart = playerEl('button', 'cr-btn', '↺');
+    restart.type = 'button';
+    const scrub = playerEl('input', 'cr-scrub');
+    scrub.type = 'range';
+    scrub.min = '0';
+    scrub.max = '0';
+    scrub.step = '1';
+    scrub.value = '0';
+    const time = playerEl('span', 'cr-time', '0:00 / 0:00');
+    const speed = playerEl('select', 'cr-speed');
+    for (const value of PLAYER_SPEEDS) {
+      const option = playerEl('option', null, `${value}x`);
+      option.value = value;
+      speed.appendChild(option);
+    }
+    [play, restart, scrub, time, speed].forEach((node) => controls.appendChild(node));
+
+    root.appendChild(screen);
+    root.appendChild(controls);
+    shadow.appendChild(playerEl('style', null, STYLES));
+    shadow.appendChild(root);
+
+    play.addEventListener('click', () => (this._state === 'playing' ? this.pause() : this.play()));
+    restart.addEventListener('click', () => this.restart());
+    scrub.addEventListener('input', () => this.seek(Number(scrub.value)));
+    speed.addEventListener('change', () => this._setConfig(Object.assign({}, this._raw, { speed: Number(speed.value) })));
+
+    this._els = {
+      screen,
+      probe,
+      header,
+      history,
+      input,
+      label: top.label,
+      typed,
+      status,
+      footer,
+      controls,
+      play,
+      scrub,
+      time,
+      speed,
+    };
+  }
+
+  _meta() {
+    return (this._timeline && this._timeline.meta) || {};
+  }
+
+  _setConfig(raw) {
+    const prev = this._cfg;
+    this._raw = raw !== null && typeof raw === 'object' ? raw : {};
+    this._cfg = normalizeConfig(this._raw);
+    this._applyLayout();
+    if (!this._schedule) {
+      this._renderChrome();
+      return;
+    }
+    if (JSON.stringify(Object.assign({}, prev, { speed: 0 })) !== JSON.stringify(Object.assign({}, this._cfg, { speed: 0 }))) {
+      this._rebuild();
+    }
+  }
+
+  _applyHost() {
+    if (!this._connected) return;
+    this.style.setProperty('--cr-width', this._cfg.width);
+    this.style.setProperty('--cr-height', this._cfg.height);
+    this.setAttribute('theme', this._cfg.theme);
+  }
+
+  _applyLayout() {
+    const els = this._els;
+    els.controls.hidden = !this._cfg.controls;
+    els.screen.style.setProperty('--cr-font', this._cfg.fontFamily);
+    this._applyFont();
+    const value = String(this._cfg.speed);
+    if (!Array.from(els.speed.options).some((option) => option.value === value)) {
+      const option = playerEl('option', null, `${value}x`);
+      option.value = value;
+      els.speed.appendChild(option);
+    }
+    els.speed.value = value;
+    this._applyHost();
+  }
+
+  _applyFont() {
+    const cfg = this._cfg;
+    let px = cfg.fontSize * cfg.scale;
+    if (cfg.fit === 'width' && this._connected) {
+      const ratio = this._els.probe.getBoundingClientRect().width / 2000;
+      const room = this.clientWidth - PLAYER_PAD;
+      if (ratio > 0 && room > 0) px = room / (cfg.columns * ratio);
+    }
+    this._els.screen.style.setProperty('--cr-font-size', `${Math.max(1, px)}px`);
+  }
+
+  _renderChrome() {
+    const meta = this._meta();
+    const { header, label, input, footer } = this._els;
+    header.textContent = '';
+    header.hidden = !this._cfg.header.show;
+    if (this._cfg.header.show) {
+      const [first, second, third] = headerLines(meta, this._cfg);
+      const info = playerEl('div');
+      const title = playerEl('div');
+      const name = 'Claude Code';
+      if (first.startsWith(name)) {
+        title.appendChild(playerEl('strong', null, name));
+        title.appendChild(playerEl('span', 'cr-dim', first.slice(name.length)));
+      } else {
+        title.textContent = first;
+      }
+      info.appendChild(title);
+      info.appendChild(playerEl('div', 'cr-dim', second));
+      info.appendChild(playerEl('div', 'cr-dim', third));
+      header.appendChild(playerLogo());
+      header.appendChild(info);
+    }
+    label.textContent = meta.agent || '';
+    input.classList.toggle('cr-unlabeled', !meta.agent);
+    footer.textContent = '';
+    const text = footerText(meta.permissionMode);
+    const cut = text.indexOf(' (');
+    const main = cut < 0 ? text : text.slice(0, cut);
+    footer.appendChild(playerEl('span', text.startsWith('?') ? 'cr-dim' : 'cr-accent', main));
+    if (cut >= 0) footer.appendChild(playerEl('span', 'cr-dim', text.slice(cut)));
+    this._renderStatus();
+  }
+
+  _renderStatus() {
+    const p = statusParts(this._meta(), this._cfg, this._live);
+    const node = this._els.status;
+    node.textContent = '';
+    const add = (className, text) => node.appendChild(playerEl('span', className, text));
+    if (p.project) add('cr-blue', `${p.project} `);
+    add('cr-magenta', `(${p.branch})`);
+    add('cr-dim', ' | ');
+    add('cr-cyan', p.model);
+    if (p.effort) {
+      add('cr-dim', ' · ');
+      add('cr-cyan-bright', p.effort);
+    }
+    add('cr-dim', ' | ');
+    add(`cr-${p.tier}`, `${p.bar} ${p.pct}%`);
+    add('cr-dim', ` of ${p.size}`);
+    add('cr-dim', ' | ⏱ ');
+    add(null, p.duration);
+    add('cr-dim', ' | ⟳ ');
+    add(null, String(p.compactions));
+  }
+
+  _resetView() {
+    this._els.history.textContent = '';
+    this._els.typed.textContent = '';
+    this._next = 0;
+    this._open = null;
+    this._at = 0;
+    this._tools = new Map();
+    this._live = { contextTokens: 0, sessionMs: 0 };
+    this._statusDirty = false;
+    this._scrollDirty = false;
+    this._renderStatus();
+  }
+
+  _row(className, mark, text) {
+    const row = playerEl('div', `cr-row ${className}`);
+    const markNode = playerEl('span', 'cr-mark', mark);
+    const body = playerEl('div', 'cr-body', text);
+    row.appendChild(markNode);
+    row.appendChild(body);
+    this._els.history.appendChild(row);
+    this._scrollDirty = true;
+    return { row, mark: markNode, body };
+  }
+
+  _setState(state) {
+    if (this._state === state) return;
+    this._state = state;
+    if (this._connected) this.setAttribute('state', state);
+    this._syncControls();
+    this.dispatchEvent(new CustomEvent('statechange', { detail: { state } }));
+  }
+
+  _syncControls() {
+    const els = this._els;
+    const total = this.duration;
+    els.scrub.max = String(total);
+    els.scrub.value = String(Math.round(this._time));
+    els.time.textContent = `${playerClock(this._time)} / ${playerClock(total)}`;
+    els.play.textContent = this._state === 'playing' ? '❚❚' : '▶';
+  }
+
+  async _load() {
+    const token = ++this._loadToken;
+    try {
+      let data = this._provided;
+      if (!data) {
+        const script = this.querySelector('script[data-timeline]');
+        const src = this.getAttribute('src');
+        if (script) {
+          data = JSON.parse(script.textContent);
+        } else if (src) {
+          this._setState('loading');
+          const response = await fetch(src);
+          if (!response.ok) throw new Error(`HTTP ${response.status} ${src}`);
+          data = await response.json();
+        } else {
+          return;
+        }
+      }
+      if (token !== this._loadToken) return;
+      this._setTimeline(data);
+    } catch (error) {
+      if (token === this._loadToken) this._fail(error);
+    }
+  }
+
+  _setTimeline(data) {
+    validateTimeline(data);
+    cancelAnimationFrame(this._raf);
+    this._raf = 0;
+    this._timeline = data;
+    this._errors = new Map(
+      data.events.filter((event) => event.type === 'tool_result').map((event) => [event.toolUseId, event.isError === true]),
+    );
+    this._schedule = null;
+    this._time = 0;
+    this._last = null;
+    this._rebuild();
+    this._setState('ready');
+    if (this._cfg.autoplay) this.play();
+  }
+
+  _fail(error) {
+    cancelAnimationFrame(this._raf);
+    this._raf = 0;
+    this._timeline = null;
+    this._schedule = null;
+    this._time = 0;
+    this._setState('error');
+    this._resetView();
+    this._renderChrome();
+    this._row('cr-error', '', `Failed to load timeline: ${error && error.message ? error.message : String(error)}`);
+    this._syncControls();
+  }
+
+  _rebuild() {
+    const oldTotal = this._schedule ? this._schedule.totalMs : 0;
+    const ratio = oldTotal > 0 ? this._time / oldTotal : 0;
+    this._schedule = buildSchedule(this._timeline, this._cfg);
+    this._time = ratio * this._schedule.totalMs;
+    this._resetView();
+    this._renderChrome();
+    this._sync(this._time);
+  }
+
+  _tick(now) {
+    this._raf = 0;
+    if (this._state !== 'playing' || !this._schedule) return;
+    const total = this._schedule.totalMs;
+    if (this._last !== null) this._time += (now - this._last) * this._cfg.speed;
+    this._last = now;
+    if (this._time >= total) {
+      this._time = total;
+      this._sync(total);
+      if (this._cfg.loop && total > 0) this.restart();
+      else this._setState('ended');
+      return;
+    }
+    this._sync(this._time);
+    this._raf = requestAnimationFrame(this._tick);
+  }
+
+  _sync(t) {
+    if (!this._schedule) return;
+    if (t < this._at) this._resetView();
+    this._at = t;
+    const segments = this._schedule.segments;
+    if (this._open && t >= this._open.seg.end) {
+      this._finish(this._open);
+      this._open = null;
+    }
+    while (!this._open && this._next < segments.length && segments[this._next].start <= t) {
+      const open = this._begin(segments[this._next++]);
+      if (t >= open.seg.end) this._finish(open);
+      else this._open = open;
+    }
+    if (this._open) this._progress(this._open, t);
+    if (this._statusDirty) {
+      this._renderStatus();
+      this._statusDirty = false;
+    }
+    if (this._scrollDirty) {
+      this._els.history.scrollTop = this._els.history.scrollHeight;
+      this._scrollDirty = false;
+    }
+    this._syncControls();
+  }
+
+  _settle(tool, isError) {
+    tool.mark.className = `cr-mark ${isError ? 'cr-red' : 'cr-green'}`;
+  }
+
+  _begin(seg) {
+    const ev = this._timeline.events[seg.eventIndex];
+    const open = { seg, ev, row: null, shown: -1 };
+    if (Number.isFinite(seg.contextTokens)) this._live.contextTokens = seg.contextTokens;
+    this._live.sessionMs = seg.sessionMs;
+    this._statusDirty = true;
+    if (seg.kind === 'type') {
+      this._els.typed.textContent = '';
+    } else if (seg.kind === 'submit') {
+      this._els.typed.textContent = '';
+      this._row('cr-prompt', '❯ ', String(ev.text ?? ''));
+    } else if (seg.kind === 'think') {
+      open.row = this._row('cr-think', '✻ ', 'Thinking…');
+    } else if (seg.kind === 'stream') {
+      open.row = this._row('cr-text', '⏺ ', '');
+      open.row.body.classList.add('cr-block');
+    } else if (seg.kind === 'tool') {
+      open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));
+      open.row.mark.classList.add('cr-wait');
+      this._tools.set(ev.id, open.row);
+    } else if (seg.kind === 'result') {
+      const tool = this._tools.get(ev.toolUseId);
+      if (tool) this._settle(tool, ev.isError === true);
+      const lines = (ev.lines || []).slice(0, this._cfg.results.lines).map((text) => ({ text, dim: false }));
+      const hidden = Math.max(0, (Number(ev.totalLines) || 0) - lines.length);
+      if (hidden > 0) lines.push({ text: `… +${hidden} line${hidden === 1 ? '' : 's'} (ctrl+o to expand)`, dim: true });
+      if (lines.length === 0) lines.push({ text: '(No content)', dim: true });
+      lines.forEach((line, i) => {
+        const tone = ev.isError === true && !line.dim ? ' cr-red' : line.dim ? ' cr-dim' : '';
+        this._row(`cr-result${tone}`, i === 0 ? '  ⎿  ' : '     ', line.text);
+      });
+    }
+    return open;
+  }
+
+  _progress(open, t) {
+    const { seg, ev } = open;
+    const elapsed = t - seg.start;
+    if (seg.kind === 'type') {
+      const times = seg.charTimes;
+      let count = 0;
+      while (count < times.length && times[count] <= elapsed) count++;
+      if (count !== open.shown) {
+        open.shown = count;
+        this._els.typed.textContent = String(ev.text ?? '').slice(0, count);
+      }
+    } else if (seg.kind === 'think') {
+      const index = Math.floor(elapsed / 120) % PLAYER_GLYPHS.length;
+      if (index !== open.shown) {
+        open.shown = index;
+        open.row.mark.textContent = `${PLAYER_GLYPHS[index]} `;
+      }
+    } else if (seg.kind === 'stream') {
+      const text = String(ev.text ?? '');
+      const count = Math.floor(text.length * Math.min(1, elapsed / (seg.end - seg.start)));
+      if (count !== open.shown) {
+        open.shown = count;
+        playerMarkdown(open.row.body, text.slice(0, count));
+        this._scrollDirty = true;
+      }
+    }
+  }
+
+  _finish(open) {
+    const { seg, ev } = open;
+    if (seg.kind === 'type') {
+      this._els.typed.textContent = String(ev.text ?? '');
+    } else if (seg.kind === 'think') {
+      const secs = Math.max(0, Math.round((Number(ev.durationMs) || 0) / 1000));
+      open.row.mark.textContent = '∴ ';
+      open.row.body.textContent = `Thought for ${secs}s`;
+      open.row.row.classList.add('cr-dim');
+    } else if (seg.kind === 'stream') {
+      playerMarkdown(open.row.body, String(ev.text ?? ''));
+      this._scrollDirty = true;
+    } else if (seg.kind === 'tool' && !this._cfg.results.show) {
+      this._settle(open.row, this._errors.get(ev.id) === true);
+    }
+  }
+}
+
+if (!customElements.get('claude-replay')) customElements.define('claude-replay', ClaudeReplay);
+
+const HOME_PATTERNS = [
+  /(?:\/Users|\/home)\/[^\/\s"'`]+/g,
+  /[A-Za-z]:\\Users\\[^\\\s"'`]+/g,
+];
+
+const SECRET_PATTERNS = [
+  /sk-ant-[A-Za-z0-9_-]{10,}/g,
+  /sk-[A-Za-z0-9]{20,}/g,
+  /gh[pousr]_[A-Za-z0-9]{20,}/g,
+  /github_pat_[A-Za-z0-9_]{20,}/g,
+  /AKIA[0-9A-Z]{16}/g,
+  /xox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g,
+];
+
+const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._~+\/=-]{16,}/g;
+
+const NAMED_SECRET_PATTERN =
+  /\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL)[A-Z0-9_]*"?[ \t]*[=:][ \t]*"?)(?!<redacted>)[^\s"',]{4,}/g;
+
+const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+const IPV4_PATTERN = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function replaceCounted(state, pattern, replacer) {
+  state.text = state.text.replace(pattern, (...args) => {
+    state.count += 1;
+    return replacer(...args);
+  });
+}
+
+function redactText(text, options = {}) {
+  const state = { text, count: 0 };
+
+  for (const pattern of HOME_PATTERNS) {
+    replaceCounted(state, pattern, () => '~');
+  }
+
+  if (typeof options.username === 'string' && options.username.length >= 3) {
+    const usernamePattern = new RegExp(`(?<!\\w)${escapeRegExp(options.username)}(?!\\w)`, 'g');
+    replaceCounted(state, usernamePattern, () => '<user>');
+  }
+
+  for (const pattern of SECRET_PATTERNS) {
+    replaceCounted(state, pattern, () => '<redacted>');
+  }
+
+  replaceCounted(state, BEARER_PATTERN, () => 'Bearer <redacted>');
+  replaceCounted(state, NAMED_SECRET_PATTERN, (match, prefix) => `${prefix}<redacted>`);
+  replaceCounted(state, EMAIL_PATTERN, () => '<email>');
+  replaceCounted(state, IPV4_PATTERN, () => '<ip>');
+
+  for (const extra of options.extraPatterns ?? []) {
+    const flags = extra.flags.includes('g') ? extra.flags : `${extra.flags}g`;
+    replaceCounted(state, new RegExp(extra.source, flags), () => '<redacted>');
+  }
+
+  return { value: state.text, count: state.count };
+}
+
+function redactNode(node, options, state) {
+  if (typeof node === 'string') {
+    const result = redactText(node, options);
+    state.count += result.count;
+    return result.value;
+  }
+  if (Array.isArray(node)) {
+    return node.map((item) => redactNode(item, options, state));
+  }
+  if (node !== null && typeof node === 'object') {
+    return Object.fromEntries(
+      Object.entries(node).map(([key, value]) => [key, redactNode(value, options, state)]),
+    );
+  }
+  return node;
+}
+
+function redactTimeline(timeline, options = {}) {
+  const state = { count: 0 };
+  const value = {
+    ...timeline,
+    meta: redactNode(timeline.meta, options, state),
+    events: redactNode(timeline.events, options, state),
+  };
+  return { value, count: state.count };
+}
+
+
+
+const HANDLED_TYPES = new Set(['user', 'assistant', 'attachment', 'agent-setting', 'permission-mode']);
+
+const SUMMARY_FIELDS = {
+  Bash: 'command',
+  Read: 'file_path',
+  Write: 'file_path',
+  Edit: 'file_path',
+  NotebookEdit: 'file_path',
+  Grep: 'pattern',
+  Glob: 'pattern',
+  WebFetch: 'url',
+  WebSearch: 'query',
+};
+
+const MAX_SUMMARY_LENGTH = 120;
+const DEFAULT_MAX_RESULT_LINES = 20;
+
+function firstStringValue(input) {
+  for (const value of Object.values(input)) {
+    if (typeof value === 'string') return value;
+  }
+  return '';
+}
+
+function summarizeToolUse(name, rawInput) {
+  const input = rawInput !== null && typeof rawInput === 'object' ? rawInput : {};
+  let text;
+  if ((name === 'Agent' || name === 'Task') && typeof input.subagent_type === 'string' && typeof input.description === 'string') {
+    text = `${input.subagent_type}: ${input.description}`;
+  } else {
+    const field = SUMMARY_FIELDS[name];
+    text = typeof input[field] === 'string' ? input[field] : firstStringValue(input);
+  }
+  if (name === 'Bash') text = text.split('\n')[0];
+  return text.length > MAX_SUMMARY_LENGTH ? `${text.slice(0, MAX_SUMMARY_LENGTH)}…` : text;
+}
+
+function contextTokensOf(usage) {
+  if (usage === null || typeof usage !== 'object') return undefined;
+  return (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+}
+
+function toolResultText(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .flatMap((part) => {
+      if (part?.type === 'image') return ['[image]'];
+      if (part?.type === 'text' && typeof part.text === 'string') return [part.text];
+      return [];
+    })
+    .join('\n');
+}
+
+function promptFromString(content, entry) {
+  const command = /<command-name>\s*([^<]*?)\s*<\/command-name>/.exec(content);
+  if (command) {
+    if (command[1] === '/clear') return null;
+    const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(content)?.[1].trim() ?? '';
+    return args ? `${command[1]} ${args}` : command[1];
+  }
+  const head = content.trimStart();
+  if (head.startsWith('<local-command-') || head.startsWith('<task-notification')) return null;
+  if (entry.origin?.kind !== undefined && entry.origin.kind !== 'human') return null;
+  return content;
+}
+
+function lastPathSegment(path) {
+  if (typeof path !== 'string') return null;
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? null;
+}
+
+function parseTranscript(jsonlText, options = {}) {
+  const maxResultLines = options.maxResultLines ?? DEFAULT_MAX_RESULT_LINES;
+  const meta = {
+    agent: null,
+    permissionMode: null,
+    model: null,
+    modelId: null,
+    effort: null,
+    claudeVersion: null,
+    cwd: null,
+    branch: null,
+    isWorktree: false,
+  };
+  const entries = [];
+  const toolUses = new Map();
+  let skippedLines = 0;
+  let turn = 0;
+  let lastTs = 0;
+  let toolCount = 0;
+  let firstAssistantModel = null;
+  let environmentSeen = false;
+
+  const setFirst = (key, value) => {
+    if (meta[key] === null && typeof value === 'string' && value !== '') meta[key] = value;
+  };
+
+  const push = (ts, type, fields, contextTokens) => {
+    const event = { type, t: 0, turn };
+    if (contextTokens !== undefined) event.contextTokens = contextTokens;
+    Object.assign(event, fields);
+    entries.push({ ts, event });
+    return event;
+  };
+
+  const pushPrompt = (ts, text) => {
+    turn += 1;
+    push(ts, 'prompt', { text });
+  };
+
+  const addToolResult = (item, entry, ts) => {
+    const use = toolUses.get(item.tool_use_id);
+    if (!use) return;
+    const text =
+      entry.toolUseResult?.status === 'async_launched' ? 'Running in background' : toolResultText(item.content);
+    const allLines = text.split('\n');
+    push(ts, 'tool_result', {
+      toolUseId: use.id,
+      isError: item.is_error === true,
+      lines: allLines.slice(0, maxResultLines),
+      totalLines: allLines.length,
+    });
+    if (use.event.durationMs === undefined) use.event.durationMs = Math.max(0, Math.round(ts - use.ts));
+  };
+
+  const handleAttachment = (entry) => {
+    const attachment = entry.attachment ?? entry;
+    if (attachment.type === 'model') {
+      setFirst('model', attachment.identity?.marketingName);
+      setFirst('modelId', attachment.identity?.modelId);
+    } else if (attachment.type === 'environment' && !environmentSeen) {
+      environmentSeen = true;
+      meta.isWorktree = attachment.snapshot?.isWorktree === true;
+    }
+  };
+
+  const handleUser = (entry, ts) => {
+    if (entry.isMeta === true) return;
+    const content = entry.message?.content;
+    if (typeof content === 'string') {
+      const text = promptFromString(content, entry);
+      if (text !== null) pushPrompt(ts, text);
+      return;
+    }
+    if (!Array.isArray(content)) return;
+    const promptParts = [];
+    for (const item of content) {
+      if (item?.type === 'tool_result') addToolResult(item, entry, ts);
+      else if (item?.type === 'text' && typeof item.text === 'string') promptParts.push(item.text);
+      else if (item?.type === 'image') promptParts.push('[Image]');
+    }
+    if (entry.promptSource === 'typed' && promptParts.length > 0) pushPrompt(ts, promptParts.join('\n'));
+  };
+
+  const handleAssistant = (entry, ts) => {
+    const message = entry.message ?? {};
+    setFirst('effort', entry.effort);
+    if (firstAssistantModel === null && typeof message.model === 'string') firstAssistantModel = message.model;
+    const blocks =
+      typeof message.content === 'string'
+        ? [{ type: 'text', text: message.content }]
+        : Array.isArray(message.content)
+          ? message.content
+          : [];
+    const contextTokens = contextTokensOf(message.usage);
+    for (const block of blocks) {
+      if (block?.type === 'thinking') {
+        const previousTs = entries.length > 0 ? entries[entries.length - 1].ts : ts;
+        const fields = {
+          durationMs:
+            typeof entry.thinkingDurationMs === 'number'
+              ? entry.thinkingDurationMs
+              : Math.max(0, Math.round(ts - previousTs)),
+        };
+        if (options.thinkingText && typeof block.thinking === 'string') fields.text = block.thinking;
+        push(ts, 'thinking', fields, contextTokens);
+      } else if (block?.type === 'text' && typeof block.text === 'string') {
+        push(ts, 'text', { text: block.text }, contextTokens);
+      } else if (block?.type === 'tool_use') {
+        toolCount += 1;
+        const id = `t${toolCount}`;
+        const name = typeof block.name === 'string' ? block.name : '';
+        const event = push(ts, 'tool_use', { id, name, summary: summarizeToolUse(name, block.input) }, contextTokens);
+        toolUses.set(block.id, { id, event, ts });
+      }
+    }
+  };
+
+  for (const line of jsonlText.split(/\r?\n/)) {
+    if (line.trim() === '') continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      skippedLines += 1;
+      continue;
+    }
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+      skippedLines += 1;
+      continue;
+    }
+    if (!HANDLED_TYPES.has(entry.type) || entry.isSidechain === true) continue;
+
+    const parsedTs = Date.parse(entry.timestamp);
+    const ts = Number.isFinite(parsedTs) ? parsedTs : lastTs;
+    lastTs = ts;
+
+    if (entry.type === 'agent-setting') {
+      setFirst('agent', entry.agentSetting);
+    } else if (entry.type === 'permission-mode') {
+      setFirst('permissionMode', entry.permissionMode);
+    } else if (entry.type === 'attachment') {
+      handleAttachment(entry);
+    } else {
+      setFirst('claudeVersion', entry.version);
+      setFirst('cwd', entry.cwd);
+      setFirst('branch', entry.gitBranch);
+      if (entry.type === 'user') {
+        if (entry.promptSource === 'typed') setFirst('permissionMode', entry.permissionMode);
+        handleUser(entry, ts);
+      } else {
+        handleAssistant(entry, ts);
+      }
+    }
+  }
+
+  if (meta.model === null) meta.model = firstAssistantModel;
+  if (meta.modelId === null) meta.modelId = firstAssistantModel;
+
+  const range = Array.isArray(options.turns) ? options.turns : null;
+  const kept = entries.filter(
+    ({ event }) => event.turn >= 1 && (range === null || (event.turn >= range[0] && event.turn <= range[1])),
+  );
+  let previousT = 0;
+  for (const { ts, event } of kept) {
+    previousT = Math.max(previousT, Math.round(ts - kept[0].ts));
+    event.t = previousT;
+  }
+
+  const timeline = {
+    version: 1,
+    meta: {
+      title: options.title ?? null,
+      claudeVersion: meta.claudeVersion,
+      model: meta.model,
+      modelId: meta.modelId,
+      effort: meta.effort,
+      agent: meta.agent,
+      cwd: meta.cwd,
+      project: null,
+      branch: meta.branch,
+      isWorktree: meta.isWorktree,
+      permissionMode: meta.permissionMode,
+      durationMs: previousT,
+    },
+    events: kept.map(({ event }) => event),
+  };
+
+  const { value, count } = redactTimeline(timeline, {
+    username: options.username,
+    extraPatterns: options.extraPatterns,
+  });
+  value.meta.project = lastPathSegment(value.meta.cwd);
+
+  return {
+    timeline: value,
+    stats: {
+      skippedLines,
+      redactions: count,
+      events: value.events.length,
+      turns: new Set(value.events.map((event) => event.turn)).size,
+    },
+  };
+}
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
+function stripModuleSyntax(source) {
+  return source
+    .replace(/^import .*;$/gm, '')
+    .replace(/^export (?=function|const|class)/gm, '');
+}
+
+function buildShowcaseHtml({ timeline, config, title, playerSources }) {
+  const code = playerSources.map(stripModuleSyntax).join('\n');
+  const timelineJson = JSON.stringify(timeline).replace(/</g, '\\u003c');
+  const configJson = escapeHtml(JSON.stringify(config ?? {}));
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${escapeHtml(title ?? '')}</title>`,
+    '<style>html,body{margin:0;background:#000}</style>',
+    '</head>',
+    '<body>',
+    `<claude-replay config='${configJson}'>`,
+    `<script type="application/json" data-timeline>${timelineJson}<\/script>`,
+    '</claude-replay>',
+    `<script type="module">\n${code}\n<\/script>`,
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
+}
+
+
+
+
+
+const STUDIO_POSIX_USER = /"cwd":"(?:\/Users|\/home)\/([^\/"]+)/;
+const STUDIO_WINDOWS_USER = /"cwd":"[A-Za-z]:\\\\Users\\\\([^\\"]+)/;
+const STUDIO_MAX_FILE_NAME = 60;
+
+function studioTurns(fields) {
+  const from = String(fields.turnsFrom ?? '').trim();
+  const to = String(fields.turnsTo ?? '').trim();
+  if (from === '' && to === '') return undefined;
+  if (/^\d+$/.test(from) && /^\d+$/.test(to) && Number(from) >= 1 && Number(from) <= Number(to)) {
+    return [Number(from), Number(to)];
+  }
+  throw new Error(`bad turn range "${from}-${to}": expected 1 <= from <= to`);
+}
+
+function studioMaxResultLines(fields) {
+  const value = String(fields.maxResultLines ?? '').trim();
+  if (value === '') return undefined;
+  if (/^\d+$/.test(value)) return Number(value);
+  throw new Error(`bad max result lines "${value}": expected non-negative integer`);
+}
+
+function studioPatterns(fields) {
+  return String(fields.redact ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
+    .map((line) => {
+      try {
+        return new RegExp(line, 'g');
+      } catch {
+        throw new Error(`bad redact pattern "${line}": invalid regex`);
+      }
+    });
+}
+
+function studioUsername(text) {
+  const match = STUDIO_POSIX_USER.exec(text) ?? STUDIO_WINDOWS_USER.exec(text);
+  return match ? match[1] : undefined;
+}
+
+function studioParseOptions(text, fields) {
+  const options = {
+    thinkingText: fields.thinkingText === true,
+    extraPatterns: studioPatterns(fields),
+  };
+  const turns = studioTurns(fields);
+  if (turns !== undefined) options.turns = turns;
+  const maxResultLines = studioMaxResultLines(fields);
+  if (maxResultLines !== undefined) options.maxResultLines = maxResultLines;
+  const title = String(fields.title ?? '').trim();
+  if (title !== '') options.title = title;
+  const username = studioUsername(text);
+  if (username !== undefined) options.username = username;
+  return options;
+}
+
+function readInputFile(file) {
+  return file.text().then((text) => {
+    const name = String(file.name);
+    return { name, kind: /\.json$/i.test(name) ? 'timeline' : 'transcript', text };
+  });
+}
+
+function timelineFromInput(input, fields = {}) {
+  if (input.kind === 'timeline') {
+    let parsed;
+    try {
+      parsed = JSON.parse(input.text);
+    } catch (error) {
+      throw new Error(`${input.name} is not valid JSON: ${error.message}`);
+    }
+    return { timeline: validateTimeline(parsed), stats: null };
+  }
+  const { timeline, stats } = parseTranscript(input.text, studioParseOptions(input.text, fields));
+  return { timeline, stats };
+}
+
+function exportFileName(title) {
+  const slug = String(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, STUDIO_MAX_FILE_NAME)
+    .replace(/-+$/, '');
+  return slug === '' ? 'showcase' : slug;
+}
+
+function embedSnippet(fileName, config, title) {
+  const style = `width:${config.width};height:${config.height};border:0`;
+  return `<iframe src="${escapeHtml(fileName)}" title="${escapeHtml(title)}" style="${escapeHtml(style)}" loading="lazy"></iframe>`;
+}
+
+
+
+
+
+
+const FIELDS = [
+  ['speed', ['speed'], 'number'],
+  ['gap-ms', ['gapMs'], 'number'],
+  ['loop', ['loop'], 'boolean'],
+  ['controls', ['controls'], 'boolean'],
+  ['typing-cps', ['typing', 'cps'], 'number'],
+  ['typing-jitter', ['typing', 'jitter'], 'number'],
+  ['typing-max-ms', ['typing', 'maxMs'], 'number'],
+  ['typing-multiplier', ['typing', 'multiplier'], 'number'],
+  ['thinking-scale', ['thinking', 'scale'], 'number'],
+  ['thinking-min-ms', ['thinking', 'minMs'], 'number'],
+  ['thinking-max-ms', ['thinking', 'maxMs'], 'number'],
+  ['thinking-multiplier', ['thinking', 'multiplier'], 'number'],
+  ['tool-scale', ['tool', 'scale'], 'number'],
+  ['tool-min-ms', ['tool', 'minMs'], 'number'],
+  ['tool-max-ms', ['tool', 'maxMs'], 'number'],
+  ['tool-multiplier', ['tool', 'multiplier'], 'number'],
+  ['output-cps', ['output', 'cps'], 'number'],
+  ['output-max-ms', ['output', 'maxMs'], 'number'],
+  ['output-multiplier', ['output', 'multiplier'], 'number'],
+  ['results-show', ['results', 'show'], 'boolean'],
+  ['results-lines', ['results', 'lines'], 'number'],
+  ['header-show', ['header', 'show'], 'boolean'],
+  ['billing', ['header', 'billing'], 'text'],
+  ['width', ['width'], 'text'],
+  ['height', ['height'], 'text'],
+  ['fit', ['fit'], 'text'],
+  ['columns', ['columns'], 'number'],
+  ['font-size', ['fontSize'], 'number'],
+  ['scale', ['scale'], 'number'],
+  ['font-family', ['fontFamily'], 'text'],
+  ['theme', ['theme'], 'text'],
+];
+
+const TURN_IDS = ['turns-from', 'turns-to'];
+
+const player = document.getElementById('player');
+const form = document.getElementById('settings');
+const output = document.getElementById('config-json');
+const copyButton = document.getElementById('copy-config');
+const fileInput = document.getElementById('timeline-file');
+const status = document.getElementById('status');
+const studioForm = document.getElementById('studio');
+const inputStatus = document.getElementById('input-status');
+const redactionCount = document.getElementById('redaction-count');
+const snippetOutput = document.getElementById('embed-snippet');
+const snippetButton = document.getElementById('copy-snippet');
+const downloadTimelineButton = document.getElementById('download-timeline');
+const exportShowcaseButton = document.getElementById('export-showcase');
+const sourcesNode = document.getElementById('player-sources');
+const exportSources = sourcesNode ? JSON.parse(sourcesNode.textContent) : null;
+
+let input = null;
+let inputToken = 0;
+
+if (!exportSources) {
+  exportShowcaseButton.disabled = true;
+  exportShowcaseButton.title = 'Export needs claude-replay-studio.html (npm run build)';
+}
+
+function pathGet(object, path) {
+  return path.reduce((node, key) => node[key], object);
+}
+
+function pathSet(object, path, value) {
+  const parent = path.slice(0, -1).reduce((node, key) => node[key], object);
+  parent[path[path.length - 1]] = value;
+}
+
+function setStatus(text) {
+  status.textContent = text;
+}
+
+function initForm() {
+  for (const [id, path, kind] of FIELDS) {
+    const input = document.getElementById(id);
+    const value = pathGet(DEFAULT_CONFIG, path);
+    if (kind === 'boolean') input.checked = value === true;
+    else input.value = value === null ? '' : String(value);
+  }
+  for (const id of TURN_IDS) document.getElementById(id).value = '';
+}
+
+function readTurns() {
+  const [from, to] = TURN_IDS.map((id) => Number(document.getElementById(id).value));
+  const valid = (n) => Number.isInteger(n) && n >= 1;
+  return valid(from) && valid(to) && from <= to ? [from, to] : null;
+}
+
+function buildConfig() {
+  const config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  for (const [id, path, kind] of FIELDS) {
+    const input = document.getElementById(id);
+    if (kind === 'boolean') {
+      pathSet(config, path, input.checked);
+    } else if (kind === 'number') {
+      const raw = input.value.trim();
+      const n = Number(raw);
+      if (raw !== '' && Number.isFinite(n)) pathSet(config, path, n);
+    } else {
+      const raw = input.value.trim();
+      if (raw !== '') pathSet(config, path, raw);
+      else if (pathGet(DEFAULT_CONFIG, path) === null) pathSet(config, path, null);
+    }
+  }
+  config.turns = readTurns();
+  return config;
+}
+
+function currentTitle() {
+  const typed = document.getElementById('parse-title').value.trim();
+  return typed || (player.timeline && player.timeline.meta && player.timeline.meta.title) || 'claude-replay';
+}
+
+function updateSnippet() {
+  snippetOutput.value = embedSnippet(`${exportFileName(currentTitle())}.html`, player.config, currentTitle());
+}
+
+function apply() {
+  const config = buildConfig();
+  output.value = JSON.stringify(config, null, 2);
+  player.config = config;
+  updateSnippet();
+}
+
+function messageOf(error) {
+  return error && error.message ? error.message : String(error);
+}
+
+async function copyFrom(textarea, label) {
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+    setStatus(`${label} copied`);
+  } catch (error) {
+    textarea.select();
+    setStatus(`Copy failed: ${messageOf(error)}`);
+  }
+}
+
+function readParserFields() {
+  return {
+    turnsFrom: document.getElementById('parse-turns-from').value,
+    turnsTo: document.getElementById('parse-turns-to').value,
+    thinkingText: document.getElementById('parse-thinking-text').checked,
+    maxResultLines: document.getElementById('parse-max-result-lines').value,
+    redact: document.getElementById('parse-redact').value,
+    title: document.getElementById('parse-title').value,
+  };
+}
+
+function showInput() {
+  if (!input) return;
+  try {
+    const { timeline, stats } = timelineFromInput(input, readParserFields());
+    player.timeline = timeline;
+    const events = stats ? stats.events : timeline.events.length;
+    const turns = stats ? stats.turns : new Set(timeline.events.map((event) => event.turn)).size;
+    const skipped = stats && stats.skippedLines > 0 ? `, ${stats.skippedLines} malformed lines skipped` : '';
+    inputStatus.textContent = `Loaded ${input.name}: ${events} events, ${turns} turns${skipped}`;
+    redactionCount.textContent = stats ? `${stats.redactions} redactions applied` : 'Timeline loaded as-is: no redaction applied';
+    updateSnippet();
+  } catch (error) {
+    inputStatus.textContent = `Failed to load ${input.name}: ${messageOf(error)}`;
+  }
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  const token = ++inputToken;
+  try {
+    const next = await readInputFile(file);
+    if (token !== inputToken) return;
+    input = next;
+    showInput();
+  } catch (error) {
+    if (token === inputToken) inputStatus.textContent = `Failed to read ${file.name}: ${messageOf(error)}`;
+  }
+}
+
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadTimeline() {
+  if (!player.timeline) {
+    inputStatus.textContent = 'No timeline loaded';
+    return;
+  }
+  download('timeline.json', `${JSON.stringify(player.timeline, null, 2)}\n`, 'application/json');
+}
+
+function exportShowcase() {
+  if (!player.timeline) {
+    inputStatus.textContent = 'No timeline loaded';
+    return;
+  }
+  const html = buildShowcaseHtml({
+    timeline: player.timeline,
+    config: player.config,
+    title: currentTitle(),
+    playerSources: exportSources,
+  });
+  download(`${exportFileName(currentTitle())}.html`, html, 'text/html');
+}
+
+form.addEventListener('submit', (event) => event.preventDefault());
+form.addEventListener('input', apply);
+form.addEventListener('change', apply);
+studioForm.addEventListener('submit', (event) => event.preventDefault());
+for (const type of ['input', 'change']) {
+  studioForm.addEventListener(type, (event) => {
+    if (!event.target.id || !event.target.id.startsWith('parse-')) return;
+    showInput();
+    updateSnippet();
+  });
+}
+copyButton.addEventListener('click', () => copyFrom(output, 'Config'));
+snippetButton.addEventListener('click', () => copyFrom(snippetOutput, 'Snippet'));
+fileInput.addEventListener('change', () => handleFile(fileInput.files && fileInput.files[0]));
+downloadTimelineButton.addEventListener('click', downloadTimeline);
+exportShowcaseButton.addEventListener('click', exportShowcase);
+document.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  document.body.classList.add('dragging');
+});
+document.addEventListener('dragleave', () => document.body.classList.remove('dragging'));
+document.addEventListener('drop', (event) => {
+  event.preventDefault();
+  document.body.classList.remove('dragging');
+  handleFile(event.dataTransfer && event.dataTransfer.files[0]);
+});
+player.addEventListener('statechange', (event) => {
+  setStatus(`State: ${event.detail.state}`);
+  if (event.detail.state === 'ready') updateSnippet();
+});
+if (player.hasAttribute('state')) setStatus(`State: ${player.getAttribute('state')}`);
+
+initForm();
+apply();
+inputStatus.textContent = 'No file loaded. Showing the built-in sample.';
+
+</script>
+</body>
+</html>

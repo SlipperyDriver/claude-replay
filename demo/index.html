@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-replay studio</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#ddd;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:16px;align-items:start}
+.player-col{position:sticky;top:16px;min-width:0}
+.settings{background:#1b1b1b;border:1px solid #333;border-radius:6px;padding:12px 16px;min-width:0}
+h1{font-size:16px;margin:0 0 4px}
+h2{font-size:13px;margin:16px 0 6px;color:#9cf;text-transform:uppercase;letter-spacing:.05em}
+.hint{margin:0 0 8px;color:#999;font-size:12px}
+.row{display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;margin:4px 0}
+.row label{color:#ccc}
+.row input,.row select{width:100%;background:#0d0d0d;color:#eee;border:1px solid #444;border-radius:3px;padding:3px 6px;font:inherit}
+.row input[type="checkbox"]{width:auto;justify-self:start}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.side{display:grid;gap:16px;min-width:0}
+.warning{border:2px solid #e05252;background:#2a1212;color:#ffd0d0;padding:8px;border-radius:4px;font-weight:600}
+body.dragging{outline:3px dashed #9cf;outline-offset:-6px}
+#embed-snippet{width:100%;height:90px;background:#0d0d0d;color:#bde;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+#parse-redact{width:100%;height:70px;background:#0d0d0d;color:#eee;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+#config-json{width:100%;height:220px;background:#0d0d0d;color:#bde;border:1px solid #444;border-radius:3px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+button{background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:3px;padding:4px 10px;font:inherit;cursor:pointer}
+#status{margin:8px 0 0;min-height:1.4em;color:#fc9}
+@media (max-width:900px){
+.layout{grid-template-columns:minmax(0,1fr)}
+.player-col{position:static}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="player-col">
+<claude-replay id="player" src="../showcases/sample/timeline.json"></claude-replay>
+</div>
+<div class="side">
+<form class="settings" id="studio" autocomplete="off">
+<h1>claude-replay studio</h1>
+<p class="hint">Runs entirely in this page. Files you open are read locally and never uploaded.</p>
+
+<h2>Input</h2>
+<div class="row"><label for="timeline-file">Open transcript (.jsonl) or timeline.json</label><input type="file" id="timeline-file" accept=".jsonl,.json,application/json"></div>
+<p class="hint">Or drop a file anywhere on this page. Transcripts are in ~/.claude/projects/.</p>
+<p id="input-status" role="status"></p>
+
+<h2>Parser (.jsonl only)</h2>
+<div class="row"><label for="parse-title">Title</label><input type="text" id="parse-title"></div>
+<div class="row"><label for="parse-turns-from">Keep turns from / to (others removed)</label><div class="pair"><input type="number" id="parse-turns-from" min="1" step="1" placeholder="from"><input type="number" id="parse-turns-to" min="1" step="1" placeholder="to"></div></div>
+<div class="row"><label for="parse-thinking-text">Include thinking text</label><input type="checkbox" id="parse-thinking-text"></div>
+<div class="row"><label for="parse-max-result-lines">Max result lines</label><input type="number" id="parse-max-result-lines" min="0" step="1" placeholder="20" value=""></div>
+<div><label for="parse-redact">Extra redact patterns (regex, one per line)</label><textarea id="parse-redact" spellcheck="false"></textarea></div>
+
+<h2>Redaction</h2>
+<p id="redaction-count"></p>
+<div id="review-warning" class="warning" role="note">Review before publishing. Redaction is pattern-based: it replaces home paths, your username, common token formats, emails and IPv4 addresses. It does not catch internal hostnames, people's names, client or project names, or secrets in other formats. Watch the whole replay and read timeline.json before you share anything.</div>
+
+<h2>Export</h2>
+<p><button type="button" id="download-timeline">Download timeline.json</button> <button type="button" id="export-showcase">Export showcase HTML</button></p>
+<p class="hint">The showcase is one self-contained HTML file with the current player settings frozen in. Open it directly, or host it next to your page and paste the snippet.</p>
+<textarea id="embed-snippet" readonly spellcheck="false"></textarea>
+<p><button type="button" id="copy-snippet">Copy snippet</button></p>
+</form>
+<form class="settings" id="settings" autocomplete="off">
+<h2>Player settings</h2>
+
+<h2>Playback</h2>
+<div class="row"><label for="speed">Speed</label><input type="number" id="speed" step="0.1" min="0.1" max="20"></div>
+<div class="row"><label for="gap-ms">Gap between segments (ms)</label><input type="number" id="gap-ms" step="10" min="0" max="5000"></div>
+<div class="row"><label for="loop">Loop</label><input type="checkbox" id="loop"></div>
+<div class="row"><label for="controls">Controls</label><input type="checkbox" id="controls"></div>
+<div class="row"><label for="turns-from">Play turns from / to (hidden turns stay in export)</label><div class="pair"><input type="number" id="turns-from" min="1" step="1" placeholder="from"><input type="number" id="turns-to" min="1" step="1" placeholder="to"></div></div>
+
+<h2>Typing</h2>
+<div class="row"><label for="typing-cps">Chars per second</label><input type="number" id="typing-cps" step="1" min="1"></div>
+<div class="row"><label for="typing-jitter">Jitter (0-0.9)</label><input type="number" id="typing-jitter" step="0.05" min="0" max="0.9"></div>
+<div class="row"><label for="typing-max-ms">Max duration (ms)</label><input type="number" id="typing-max-ms" step="100" min="0"></div>
+<div class="row"><label for="typing-multiplier">Multiplier</label><input type="number" id="typing-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Thinking</h2>
+<div class="row"><label for="thinking-scale">Scale</label><input type="number" id="thinking-scale" step="0.05" min="0"></div>
+<div class="row"><label for="thinking-min-ms">Min (ms)</label><input type="number" id="thinking-min-ms" step="100" min="0"></div>
+<div class="row"><label for="thinking-max-ms">Max (ms)</label><input type="number" id="thinking-max-ms" step="100" min="0"></div>
+<div class="row"><label for="thinking-multiplier">Multiplier</label><input type="number" id="thinking-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Tool wait</h2>
+<div class="row"><label for="tool-scale">Scale</label><input type="number" id="tool-scale" step="0.05" min="0"></div>
+<div class="row"><label for="tool-min-ms">Min (ms)</label><input type="number" id="tool-min-ms" step="100" min="0"></div>
+<div class="row"><label for="tool-max-ms">Max (ms)</label><input type="number" id="tool-max-ms" step="100" min="0"></div>
+<div class="row"><label for="tool-multiplier">Multiplier</label><input type="number" id="tool-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Output</h2>
+<div class="row"><label for="output-cps">Chars per second</label><input type="number" id="output-cps" step="10" min="1"></div>
+<div class="row"><label for="output-max-ms">Max duration (ms)</label><input type="number" id="output-max-ms" step="100" min="0"></div>
+<div class="row"><label for="output-multiplier">Multiplier</label><input type="number" id="output-multiplier" step="0.05" min="0.05" max="20"></div>
+
+<h2>Results and header</h2>
+<div class="row"><label for="results-show">Show tool results</label><input type="checkbox" id="results-show"></div>
+<div class="row"><label for="results-lines">Result lines</label><input type="number" id="results-lines" step="1" min="0" max="50"></div>
+<div class="row"><label for="header-show">Show header</label><input type="checkbox" id="header-show"></div>
+<div class="row"><label for="billing">Billing text</label><input type="text" id="billing" placeholder="API Usage Billing"></div>
+
+<h2>Layout</h2>
+<div class="row"><label for="width">Width (css)</label><input type="text" id="width"></div>
+<div class="row"><label for="height">Height (css)</label><input type="text" id="height"></div>
+<div class="row"><label for="fit">Fit</label><select id="fit"><option value="none">none</option><option value="width">width</option></select></div>
+<div class="row"><label for="columns">Columns (fit: width)</label><input type="number" id="columns" step="1" min="40" max="300"></div>
+<div class="row"><label for="font-size">Font size (px)</label><input type="number" id="font-size" step="1" min="6" max="48"></div>
+<div class="row"><label for="scale">Scale</label><input type="number" id="scale" step="0.05" min="0.25" max="4"></div>
+<div class="row"><label for="font-family">Font family</label><input type="text" id="font-family"></div>
+<div class="row"><label for="theme">Theme</label><select id="theme"><option value="dark">dark</option><option value="light">light</option></select></div>
+
+<h2>Config JSON</h2>
+<textarea id="config-json" readonly spellcheck="false"></textarea>
+<p><button type="button" id="copy-config">Copy config</button></p>
+<p id="status" role="status"></p>
+</form>
+</div>
+</div>
+<script type="module" src="./demo.js"></script>
+</body>
+</html>
