@@ -3,6 +3,7 @@ const FORMAT_FOOTERS = {
   acceptEdits: '⏵⏵ accept edits on (shift+tab to cycle)',
   plan: '⏸ plan mode on (shift+tab to cycle)',
 };
+const FORMAT_MCP = /^mcp__(.+?)__(.+)$/;
 
 export function contextPercent(tokens, total) {
   const t = Number(tokens);
@@ -80,6 +81,22 @@ export function footerText(permissionMode) {
 
 export function toolLabel(event) {
   return `${event.name}(${event.summary === undefined || event.summary === null ? '' : event.summary})`;
+}
+
+export function toolGroupKey(name) {
+  const text = String(name ?? '');
+  const match = FORMAT_MCP.exec(text);
+  return match ? `mcp__${match[1]}` : text;
+}
+
+export function toolGroupLabel(name, count) {
+  const text = String(name ?? '');
+  const s = count === 1 ? '' : 's';
+  const match = FORMAT_MCP.exec(text);
+  if (match) return `Called ${match[1]} ${count} time${s}`;
+  if (text === 'Read') return `Read ${count} file${s}`;
+  if (text === 'Grep' || text === 'Glob') return `Searched for ${count} pattern${s}`;
+  return `Called ${text} ${count} time${s}`;
 }
 
 function formatSpans(text) {

@@ -60,7 +60,7 @@ export const DEFAULT_CONFIG = configDeepFreeze({
   gapMs: 150,
   typing: { cps: 28, jitter: 0.35, punctuationPauseMs: 120, maxMs: 6000, submitPauseMs: 350, multiplier: 1 },
   thinking: { scale: 0.25, minMs: 800, maxMs: 4000, multiplier: 1 },
-  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1 },
+  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1, combine: true },
   output: { cps: 600, maxMs: 2500, multiplier: 1 },
   results: { show: true, lines: 3 },
   header: { show: true, billing: null },

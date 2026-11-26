@@ -1,5 +1,5 @@
 import { normalizeConfig } from './config.js';
-import { statusParts, headerLines, footerText, toolLabel, parseMarkdownLite } from './format.js';
+import { statusParts, headerLines, footerText, toolLabel, toolGroupLabel, parseMarkdownLite } from './format.js';
 import { validateTimeline, buildSchedule } from './schedule.js';
 import { STYLES } from './styles.js';
 
@@ -405,6 +405,7 @@ export class ClaudeReplay extends HTMLElement {
     this._open = null;
     this._at = 0;
     this._tools = new Map();
+    this._groups = new Map();
     this._live = { contextTokens: 0, sessionMs: 0 };
     this._statusDirty = false;
     this._scrollDirty = false;
@@ -567,8 +568,15 @@ export class ClaudeReplay extends HTMLElement {
       open.row = this._row('cr-text', '⏺ ', '');
       open.row.body.classList.add('cr-block');
     } else if (seg.kind === 'tool') {
-      open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));
-      open.row.mark.classList.add('cr-wait');
+      if (seg.group && this._groups.has(seg.group.first)) {
+        open.row = this._groups.get(seg.group.first).row;
+        open.row.body.textContent = toolGroupLabel(ev.name, seg.group.position);
+        open.row.mark.className = 'cr-mark cr-wait';
+      } else {
+        open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));
+        open.row.mark.classList.add('cr-wait');
+        if (seg.group) this._groups.set(seg.group.first, { row: open.row, failed: false });
+      }
       this._tools.set(ev.id, open.row);
     } else if (seg.kind === 'result') {
       const tool = this._tools.get(ev.toolUseId);
@@ -625,6 +633,10 @@ export class ClaudeReplay extends HTMLElement {
     } else if (seg.kind === 'stream') {
       playerMarkdown(open.row.body, String(ev.text ?? ''));
       this._scrollDirty = true;
+    } else if (seg.kind === 'tool' && seg.group) {
+      const group = this._groups.get(seg.group.first);
+      group.failed = group.failed || this._errors.get(ev.id) === true;
+      this._settle(group.row, group.failed);
     } else if (seg.kind === 'tool' && !this._cfg.results.show) {
       this._settle(open.row, this._errors.get(ev.id) === true);
     }

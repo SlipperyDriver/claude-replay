@@ -10,6 +10,8 @@ import {
   headerLines,
   footerText,
   toolLabel,
+  toolGroupKey,
+  toolGroupLabel,
   parseMarkdownLite,
 } from '../src/player/format.js';
 import { normalizeConfig } from '../src/player/config.js';
@@ -84,6 +86,23 @@ test('footerText', () => {
 
 test('toolLabel', () => {
   assert.equal(toolLabel({ name: 'Bash', summary: 'npm test' }), 'Bash(npm test)');
+});
+
+test('toolGroupKey', () => {
+  assert.equal(toolGroupKey('Read'), 'Read');
+  assert.equal(toolGroupKey('mcp__github__get_issue'), 'mcp__github');
+  assert.equal(toolGroupKey('mcp__ccd_session_mgmt__list_sessions'), 'mcp__ccd_session_mgmt');
+  assert.equal(toolGroupKey('mcp__scheduled-tasks__list_scheduled_tasks'), 'mcp__scheduled-tasks');
+  assert.equal(toolGroupKey('mcp__bad'), 'mcp__bad');
+});
+
+test('toolGroupLabel', () => {
+  assert.equal(toolGroupLabel('Read', 3), 'Read 3 files');
+  assert.equal(toolGroupLabel('Read', 1), 'Read 1 file');
+  assert.equal(toolGroupLabel('Grep', 2), 'Searched for 2 patterns');
+  assert.equal(toolGroupLabel('Glob', 1), 'Searched for 1 pattern');
+  assert.equal(toolGroupLabel('mcp__github__get_issue', 2), 'Called github 2 times');
+  assert.equal(toolGroupLabel('Bash', 3), 'Called Bash 3 times');
 });
 
 test('parseMarkdownLite inline spans', () => {

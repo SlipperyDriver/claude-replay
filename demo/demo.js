@@ -20,6 +20,7 @@ const FIELDS = [
   ['tool-min-ms', ['tool', 'minMs'], 'number'],
   ['tool-max-ms', ['tool', 'maxMs'], 'number'],
   ['tool-multiplier', ['tool', 'multiplier'], 'number'],
+  ['tool-combine', ['tool', 'combine'], 'boolean'],
   ['output-cps', ['output', 'cps'], 'number'],
   ['output-max-ms', ['output', 'maxMs'], 'number'],
   ['output-multiplier', ['output', 'multiplier'], 'number'],

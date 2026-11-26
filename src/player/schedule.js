@@ -1,4 +1,5 @@
 import { normalizeConfig } from './config.js';
+import { toolGroupKey } from './format.js';
 
 const SCHEDULE_TYPES = ['prompt', 'thinking', 'text', 'tool_use', 'tool_result'];
 const SCHEDULE_PUNCTUATION = '.,;:?!';
@@ -56,20 +57,54 @@ function scheduleTyping(text, typing, rng) {
   return { duration, charTimes };
 }
 
+function scheduleInTurns(event, turns) {
+  if (!turns) return true;
+  const turn = Number(event.turn);
+  return turn >= turns[0] && turn <= turns[1];
+}
+
+function scheduleToolGroups(events, cfg) {
+  const members = new Map();
+  const ids = new Set();
+  let run = null;
+  const close = () => {
+    if (run && run.indexes.length >= 2) {
+      run.indexes.forEach((index, i) => {
+        members.set(index, { first: run.indexes[0], position: i + 1, size: run.indexes.length });
+        ids.add(events[index].id);
+      });
+    }
+    run = null;
+  };
+  events.forEach((event, eventIndex) => {
+    if (!scheduleInTurns(event, cfg.turns)) return;
+    if (event.type === 'tool_result') return;
+    if (event.type !== 'tool_use') {
+      close();
+      return;
+    }
+    const key = toolGroupKey(event.name);
+    if (run && run.key !== key) close();
+    if (!run) run = { key, indexes: [] };
+    run.indexes.push(eventIndex);
+  });
+  close();
+  return { members, ids };
+}
+
 export function buildSchedule(timeline, config) {
   const cfg = normalizeConfig(config);
   const events = timeline && Array.isArray(timeline.events) ? timeline.events : [];
   const rng = scheduleMulberry32(cfg.seed);
   const gap = Math.round(cfg.gapMs);
+  const groups = cfg.tool.combine ? scheduleToolGroups(events, cfg) : { members: new Map(), ids: new Set() };
   const segments = [];
   let cursor = 0;
   let totalMs = 0;
   events.forEach((event, eventIndex) => {
-    if (cfg.turns) {
-      const turn = Number(event.turn);
-      if (!(turn >= cfg.turns[0] && turn <= cfg.turns[1])) return;
-    }
+    if (!scheduleInTurns(event, cfg.turns)) return;
     if (event.type === 'tool_result' && !cfg.results.show) return;
+    if (event.type === 'tool_result' && groups.ids.has(event.toolUseId)) return;
     const place = (kind, duration, extra, pause) => {
       const segment = {
         kind,
@@ -99,7 +134,7 @@ export function buildSchedule(timeline, config) {
     } else if (event.type === 'tool_use') {
       const { scale, minMs, maxMs, multiplier } = cfg.tool;
       const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;
-      place('tool', Math.round(ms), {}, gap);
+      place('tool', Math.round(ms), groups.members.has(eventIndex) ? { group: { ...groups.members.get(eventIndex) } } : {}, gap);
     } else {
       place('result', 0, {}, gap);
     }

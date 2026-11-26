@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "grouped",
+    "claudeVersion": "2.1.308",
+    "model": "Sonnet 5.5",
+    "modelId": "claude-sonnet-5-5",
+    "effort": "high",
+    "agent": null,
+    "cwd": "~/Projects/demo-app",
+    "project": "demo-app",
+    "branch": "main",
+    "isWorktree": false,
+    "permissionMode": "bypassPermissions",
+    "durationMs": 19000
+  },
+  "events": [
+    {
+      "type": "prompt",
+      "text": "Check the CLI files and open issues",
+      "t": 0,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t1",
+      "name": "Read",
+      "summary": "~/Projects/demo-app/bin/cli.js",
+      "durationMs": 100,
+      "t": 1000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t1",
+      "isError": false,
+      "lines": [
+        "#!/usr/bin/env node"
+      ],
+      "totalLines": 1,
+      "t": 2000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t2",
+      "name": "Read",
+      "summary": "~/Projects/demo-app/package.json",
+      "durationMs": 100,
+      "t": 3000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t2",
+      "isError": false,
+      "lines": [
+        "{"
+      ],
+      "totalLines": 1,
+      "t": 4000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t3",
+      "name": "Read",
+      "summary": "~/Projects/demo-app/README.md",
+      "durationMs": 100,
+      "t": 5000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t3",
+      "isError": false,
+      "lines": [
+        "# demo-app"
+      ],
+      "totalLines": 1,
+      "t": 6000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t4",
+      "name": "mcp__github__get_issue",
+      "summary": "42",
+      "durationMs": 100,
+      "t": 7000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t4",
+      "isError": false,
+      "lines": [
+        "Issue 42: add a --version flag"
+      ],
+      "totalLines": 1,
+      "t": 8000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t5",
+      "name": "mcp__github__list_pull_requests",
+      "summary": "open",
+      "durationMs": 100,
+      "t": 9000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t5",
+      "isError": true,
+      "lines": [
+        "rate limited"
+      ],
+      "totalLines": 1,
+      "t": 10000,
+      "turn": 1
+    },
+    {
+      "type": "text",
+      "text": "Two lookups done.",
+      "t": 11000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t6",
+      "name": "Grep",
+      "summary": "version",
+      "durationMs": 100,
+      "t": 12000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t6",
+      "isError": false,
+      "lines": [
+        "bin/cli.js:3"
+      ],
+      "totalLines": 1,
+      "t": 13000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t7",
+      "name": "Grep",
+      "summary": "--version",
+      "durationMs": 100,
+      "t": 14000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t7",
+      "isError": false,
+      "lines": [
+        "README.md:12"
+      ],
+      "totalLines": 1,
+      "t": 15000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t8",
+      "name": "Bash",
+      "summary": "npm test",
+      "durationMs": 100,
+      "t": 16000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t8",
+      "isError": false,
+      "lines": [
+        "# pass 12"
+      ],
+      "totalLines": 1,
+      "t": 17000,
+      "turn": 1
+    },
+    {
+      "type": "tool_use",
+      "id": "t9",
+      "name": "Read",
+      "summary": "~/Projects/demo-app/CHANGELOG.md",
+      "durationMs": 100,
+      "t": 18000,
+      "turn": 1
+    },
+    {
+      "type": "tool_result",
+      "toolUseId": "t9",
+      "isError": false,
+      "lines": [
+        "# Changelog"
+      ],
+      "totalLines": 1,
+      "t": 19000,
+      "turn": 1
+    }
+  ]
+}

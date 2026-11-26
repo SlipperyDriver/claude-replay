@@ -1,7 +1,11 @@
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { buildSchedule, validateTimeline } from '../src/player/schedule.js';
 import { DEFAULT_CONFIG, normalizeConfig } from '../src/player/config.js';
+
+const groupedFixture = JSON.parse(readFileSync(new URL('./fixtures/grouped-timeline.json', import.meta.url), 'utf8'));
+const sampleTimeline = JSON.parse(readFileSync(new URL('../showcases/sample/timeline.json', import.meta.url), 'utf8'));
 
 function timeline(events) {
   return { version: 1, meta: {}, events };
@@ -142,4 +146,67 @@ test('normalizeConfig defaults and clamps', () => {
   assert.doesNotThrow(() => normalizeConfig('junk'));
   assert.ok(Object.isFrozen(DEFAULT_CONFIG));
   assert.ok(Object.isFrozen(DEFAULT_CONFIG.typing));
+});
+
+test('normalizeConfig tool.combine', () => {
+  assert.equal(DEFAULT_CONFIG.tool.combine, true);
+  assert.equal(normalizeConfig({}).tool.combine, true);
+  assert.equal(normalizeConfig({ tool: { combine: false } }).tool.combine, false);
+  assert.equal(normalizeConfig({ tool: { combine: 'false' } }).tool.combine, true);
+});
+
+test('combine groups consecutive same tool calls', () => {
+  assert.doesNotThrow(() => validateTimeline(groupedFixture));
+  const { segments } = buildSchedule(groupedFixture, {});
+  assert.deepEqual(
+    segments.map((s) => s.kind),
+    ['type', 'submit', 'tool', 'tool', 'tool', 'tool', 'tool', 'stream', 'tool', 'tool', 'tool', 'result', 'tool', 'result'],
+  );
+  assert.deepEqual(segments.map((s) => s.eventIndex), [0, 0, 1, 3, 5, 7, 9, 11, 12, 14, 16, 17, 18, 19]);
+  const groupOf = (index) => segments.find((s) => s.kind === 'tool' && s.eventIndex === index).group;
+  assert.deepEqual(groupOf(1), { first: 1, position: 1, size: 3 });
+  assert.deepEqual(groupOf(3), { first: 1, position: 2, size: 3 });
+  assert.deepEqual(groupOf(5), { first: 1, position: 3, size: 3 });
+  assert.deepEqual(groupOf(7), { first: 7, position: 1, size: 2 });
+  assert.deepEqual(groupOf(9), { first: 7, position: 2, size: 2 });
+  assert.deepEqual(groupOf(12), { first: 12, position: 1, size: 2 });
+  assert.deepEqual(groupOf(14), { first: 12, position: 2, size: 2 });
+  assert.equal('group' in segments.find((s) => s.eventIndex === 16), false);
+  assert.equal('group' in segments.find((s) => s.eventIndex === 18), false);
+  const hidden = buildSchedule(groupedFixture, { results: { show: false } }).segments;
+  assert.equal(hidden.some((s) => s.kind === 'result'), false);
+  assert.deepEqual(
+    hidden.filter((s) => s.kind === 'tool').map((s) => s.group),
+    segments.filter((s) => s.kind === 'tool').map((s) => s.group),
+  );
+});
+
+test('combine breaks on thinking and text', () => {
+  const read = (id) => ({ type: 'tool_use', t: 0, turn: 1, id, name: 'Read', summary: 'x' });
+  const done = (id) => ({ type: 'tool_result', t: 0, turn: 1, toolUseId: id, isError: false, lines: ['ok'], totalLines: 1 });
+  const tl = timeline([
+    read('t1'),
+    done('t1'),
+    thinking(1000),
+    read('t2'),
+    done('t2'),
+    { type: 'text', t: 0, turn: 1, text: 'hi' },
+    read('t3'),
+    done('t3'),
+  ]);
+  const { segments } = buildSchedule(tl, {});
+  assert.equal(segments.some((s) => 'group' in s), false);
+  assert.equal(segments.filter((s) => s.kind === 'result').length, 3);
+});
+
+test('combine off keeps every call', () => {
+  const { segments } = buildSchedule(groupedFixture, { tool: { combine: false } });
+  assert.equal(segments.length, 21);
+  assert.equal(segments.filter((s) => s.kind === 'tool').length, 9);
+  assert.equal(segments.filter((s) => s.kind === 'result').length, 9);
+  assert.equal(segments.some((s) => 'group' in s), false);
+});
+
+test('combine leaves sample schedule unchanged', () => {
+  assert.deepEqual(buildSchedule(sampleTimeline, {}), buildSchedule(sampleTimeline, { tool: { combine: false } }));
 });

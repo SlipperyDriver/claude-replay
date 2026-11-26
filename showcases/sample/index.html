@@ -73,7 +73,7 @@ const DEFAULT_CONFIG = configDeepFreeze({
   gapMs: 150,
   typing: { cps: 28, jitter: 0.35, punctuationPauseMs: 120, maxMs: 6000, submitPauseMs: 350, multiplier: 1 },
   thinking: { scale: 0.25, minMs: 800, maxMs: 4000, multiplier: 1 },
-  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1 },
+  tool: { scale: 0.25, minMs: 400, maxMs: 3000, multiplier: 1, combine: true },
   output: { cps: 600, maxMs: 2500, multiplier: 1 },
   results: { show: true, lines: 3 },
   header: { show: true, billing: null },
@@ -135,6 +135,7 @@ const FORMAT_FOOTERS = {
   acceptEdits: '⏵⏵ accept edits on (shift+tab to cycle)',
   plan: '⏸ plan mode on (shift+tab to cycle)',
 };
+const FORMAT_MCP = /^mcp__(.+?)__(.+)$/;
 
 function contextPercent(tokens, total) {
   const t = Number(tokens);
@@ -214,6 +215,22 @@ function toolLabel(event) {
   return `${event.name}(${event.summary === undefined || event.summary === null ? '' : event.summary})`;
 }
 
+function toolGroupKey(name) {
+  const text = String(name ?? '');
+  const match = FORMAT_MCP.exec(text);
+  return match ? `mcp__${match[1]}` : text;
+}
+
+function toolGroupLabel(name, count) {
+  const text = String(name ?? '');
+  const s = count === 1 ? '' : 's';
+  const match = FORMAT_MCP.exec(text);
+  if (match) return `Called ${match[1]} ${count} time${s}`;
+  if (text === 'Read') return `Read ${count} file${s}`;
+  if (text === 'Grep' || text === 'Glob') return `Searched for ${count} pattern${s}`;
+  return `Called ${text} ${count} time${s}`;
+}
+
 function formatSpans(text) {
   const spans = [];
   const pattern = /`([^`\n]+)`|\*\*([^\n]+?)\*\*/g;
@@ -265,6 +282,7 @@ function parseMarkdownLite(text) {
   flush();
   return blocks;
 }
+
 
 
 
@@ -324,20 +342,54 @@ function scheduleTyping(text, typing, rng) {
   return { duration, charTimes };
 }
 
+function scheduleInTurns(event, turns) {
+  if (!turns) return true;
+  const turn = Number(event.turn);
+  return turn >= turns[0] && turn <= turns[1];
+}
+
+function scheduleToolGroups(events, cfg) {
+  const members = new Map();
+  const ids = new Set();
+  let run = null;
+  const close = () => {
+    if (run && run.indexes.length >= 2) {
+      run.indexes.forEach((index, i) => {
+        members.set(index, { first: run.indexes[0], position: i + 1, size: run.indexes.length });
+        ids.add(events[index].id);
+      });
+    }
+    run = null;
+  };
+  events.forEach((event, eventIndex) => {
+    if (!scheduleInTurns(event, cfg.turns)) return;
+    if (event.type === 'tool_result') return;
+    if (event.type !== 'tool_use') {
+      close();
+      return;
+    }
+    const key = toolGroupKey(event.name);
+    if (run && run.key !== key) close();
+    if (!run) run = { key, indexes: [] };
+    run.indexes.push(eventIndex);
+  });
+  close();
+  return { members, ids };
+}
+
 function buildSchedule(timeline, config) {
   const cfg = normalizeConfig(config);
   const events = timeline && Array.isArray(timeline.events) ? timeline.events : [];
   const rng = scheduleMulberry32(cfg.seed);
   const gap = Math.round(cfg.gapMs);
+  const groups = cfg.tool.combine ? scheduleToolGroups(events, cfg) : { members: new Map(), ids: new Set() };
   const segments = [];
   let cursor = 0;
   let totalMs = 0;
   events.forEach((event, eventIndex) => {
-    if (cfg.turns) {
-      const turn = Number(event.turn);
-      if (!(turn >= cfg.turns[0] && turn <= cfg.turns[1])) return;
-    }
+    if (!scheduleInTurns(event, cfg.turns)) return;
     if (event.type === 'tool_result' && !cfg.results.show) return;
+    if (event.type === 'tool_result' && groups.ids.has(event.toolUseId)) return;
     const place = (kind, duration, extra, pause) => {
       const segment = {
         kind,
@@ -367,7 +419,7 @@ function buildSchedule(timeline, config) {
     } else if (event.type === 'tool_use') {
       const { scale, minMs, maxMs, multiplier } = cfg.tool;
       const ms = scheduleClamp(scheduleNumber(event.durationMs) * scale, minMs, maxMs) * multiplier;
-      place('tool', Math.round(ms), {}, gap);
+      place('tool', Math.round(ms), groups.members.has(eventIndex) ? { group: { ...groups.members.get(eventIndex) } } : {}, gap);
     } else {
       place('result', 0, {}, gap);
     }
@@ -837,6 +889,7 @@ class ClaudeReplay extends HTMLElement {
     this._open = null;
     this._at = 0;
     this._tools = new Map();
+    this._groups = new Map();
     this._live = { contextTokens: 0, sessionMs: 0 };
     this._statusDirty = false;
     this._scrollDirty = false;
@@ -999,8 +1052,15 @@ class ClaudeReplay extends HTMLElement {
       open.row = this._row('cr-text', '⏺ ', '');
       open.row.body.classList.add('cr-block');
     } else if (seg.kind === 'tool') {
-      open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));
-      open.row.mark.classList.add('cr-wait');
+      if (seg.group && this._groups.has(seg.group.first)) {
+        open.row = this._groups.get(seg.group.first).row;
+        open.row.body.textContent = toolGroupLabel(ev.name, seg.group.position);
+        open.row.mark.className = 'cr-mark cr-wait';
+      } else {
+        open.row = this._row('cr-tool', '⏺ ', toolLabel(ev));
+        open.row.mark.classList.add('cr-wait');
+        if (seg.group) this._groups.set(seg.group.first, { row: open.row, failed: false });
+      }
       this._tools.set(ev.id, open.row);
     } else if (seg.kind === 'result') {
       const tool = this._tools.get(ev.toolUseId);
@@ -1057,6 +1117,10 @@ class ClaudeReplay extends HTMLElement {
     } else if (seg.kind === 'stream') {
       playerMarkdown(open.row.body, String(ev.text ?? ''));
       this._scrollDirty = true;
+    } else if (seg.kind === 'tool' && seg.group) {
+      const group = this._groups.get(seg.group.first);
+      group.failed = group.failed || this._errors.get(ev.id) === true;
+      this._settle(group.row, group.failed);
     } else if (seg.kind === 'tool' && !this._cfg.results.show) {
       this._settle(open.row, this._errors.get(ev.id) === true);
     }
