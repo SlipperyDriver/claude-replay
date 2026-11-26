@@ -5,7 +5,7 @@ Replays a Claude Code session transcript (`.jsonl`) as a terminal-style animatio
 - `<claude-replay>` web component: `src/player/`
 - Settings demo page: `demo/`
 - Node CLI: `bin/claude-replay.js`. Converts a transcript to `timeline.json` and bundles a timeline into one self-contained HTML file.
-- Studio: `claude-replay-studio.html`, one committed file built from `demo/`. Opens a transcript or `timeline.json` in the browser and exports a showcase HTML or `timeline.json`.
+- Studio: `index.html`, one committed file built from `demo/`. Opens a transcript or `timeline.json` in the browser and exports a showcase HTML or `timeline.json`.
 
 No npm dependencies.
 
@@ -25,14 +25,14 @@ No npm dependencies.
 
 ## Quick start
 
-Double-click `claude-replay-studio.html` in the repo root. No install, npm or server is needed. The file loads from `file://` and makes no network requests (see [Studio](#studio)).
+Double-click `index.html` in the repo root. No install, npm or server is needed. The file loads from `file://` and makes no network requests (see [Studio](#studio)).
 
 - Maintainers: ES modules do not load over `file://`, so the dev page at `demo/` and any page that imports `src/player/` need an HTTP server. From the repo root, run `npm run serve` (or `python3 -m http.server 8730`), then open `http://localhost:8730/demo/`. Export is disabled on the dev page because it has no player sources block.
 - A bundled showcase, for example `showcases/sample/index.html`, has no external references and opens directly from `file://`.
 
 ## Studio
 
-`claude-replay-studio.html` is one file with the player, parser, redaction and export code inline. It reads files with the browser File API and never uploads them. Its Content-Security-Policy meta tag sets `default-src 'none'`, so the page cannot make network requests (`src/cli/build-studio.js:6`).
+`index.html` is one file with the player, parser, redaction and export code inline. It reads files with the browser File API and never uploads them. Its Content-Security-Policy meta tag sets `default-src 'none'`, so the page cannot make network requests (`src/cli/build-studio.js:6`).
 
 The right-hand column, top to bottom:
 
@@ -269,9 +269,9 @@ On success, `bundle` prints one `wrote <out>` line with the output size.
 | `-o, --out <file>` | Output studio HTML. Required. |
 | `-h, --help` | Print usage and exit 0. |
 
-`studio` takes no input file. It builds the studio from `demo/index.html`, the player files in `src/player/`, the parser, redaction and bundler in `src/cli/`, `src/studio/studio.js`, `demo/demo.js`, and the sample `showcases/sample/timeline.json` (`bin/claude-replay.js:127, 175, 186-191`). The same inputs give the same bytes, so the committed `claude-replay-studio.html` can be checked against a fresh build (test `studio artifact is regenerable`, `test/studio-build.test.js:89`).
+`studio` takes no input file. It builds the studio from `demo/index.html`, the player files in `src/player/`, the parser, redaction and bundler in `src/cli/`, `src/studio/studio.js`, `demo/demo.js`, and the sample `showcases/sample/timeline.json` (`bin/claude-replay.js:127, 175, 186-191`). The same inputs give the same bytes, so the committed `index.html` can be checked against a fresh build (test `studio artifact is regenerable`, `test/studio-build.test.js:89`).
 
-`npm run build` runs `node bin/claude-replay.js studio -o claude-replay-studio.html` (`package.json` `scripts.build`). See [Development](#development) for when to rebuild.
+`npm run build` runs `node bin/claude-replay.js studio -o index.html` (`package.json` `scripts.build`). See [Development](#development) for when to rebuild.
 
 On success, `studio` prints one `wrote <out>` line with the output size.
 
@@ -382,12 +382,12 @@ The player checks only `version` (must be `1`), that `events` is an array, and e
 
 ## Deploy to GitHub Pages
 
-The repo root is the Pages site. Pages serves committed files as they are. `claude-replay-studio.html` is committed build output, so run `npm run build` before you commit a change to any file it reads (see [Development](#development)).
+The repo root is the Pages site. Pages serves committed files as they are. `index.html` is committed build output, so run `npm run build` before you commit a change to any file it reads (see [Development](#development)).
 
 1. Commit to `main`. Do not commit unreviewed timelines.
 2. In repository Settings, open Pages. Under Build and deployment, set Source to "Deploy from a branch", Branch to `main`, and folder to `/ (root)`.
 3. Pages URLs:
-   - Studio: `https://<owner>.github.io/<repo>/claude-replay-studio.html`
+   - Studio: `https://<owner>.github.io/<repo>/`
    - Demo (dev page, Export disabled): `https://<owner>.github.io/<repo>/demo/`
    - Showcase: `https://<owner>.github.io/<repo>/showcases/<name>/`
 
@@ -399,7 +399,7 @@ A showcase is one `index.html` under `showcases/<name>/`. Use path A (studio) or
 
 Path A, studio:
 
-1. Open `claude-replay-studio.html` and load the transcript. Set the Title and parser options if needed.
+1. Open `index.html` and load the transcript. Set the Title and parser options if needed.
 2. Review the redaction count and the replay. See [Privacy and redaction](#privacy-and-redaction).
 3. Set the player settings. Click `Export showcase HTML`. The download is named after the title, for example `my-demo.html`.
 4. Save the file as `showcases/<name>/index.html` and commit it. Do not commit raw `.jsonl` transcripts.
@@ -429,7 +429,7 @@ Both paths use `buildShowcaseHtml` (`src/cli/bundle.js:13-35`). The HTML is self
 
 - Node.js 20 or later (`package.json` `engines`). The code uses `node:test` and `util.parseArgs`.
 - `npm test` runs `node --test` (`package.json` `scripts.test`). The CLI tests write only under the OS temp directory (`test/cli.test.js`).
-- `npm run build` regenerates `claude-replay-studio.html` (`package.json` `scripts.build`). Run it after changing any file the build reads: `src/player/*.js`, `src/cli/redact.js`, `src/cli/parse.js`, `src/cli/bundle.js`, `src/studio/studio.js`, `demo/index.html`, `demo/demo.js`, `showcases/sample/timeline.json`, or the builder `src/cli/build-studio.js` (`bin/claude-replay.js:127, 175, 186-191`). Commit the regenerated file. The test `studio artifact is regenerable` (`test/studio-build.test.js:89`) fails when the committed file is stale.
+- `npm run build` regenerates `index.html` (`package.json` `scripts.build`). Run it after changing any file the build reads: `src/player/*.js`, `src/cli/redact.js`, `src/cli/parse.js`, `src/cli/bundle.js`, `src/studio/studio.js`, `demo/index.html`, `demo/demo.js`, `showcases/sample/timeline.json`, or the builder `src/cli/build-studio.js` (`bin/claude-replay.js:127, 175, 186-191`). Commit the regenerated file. The test `studio artifact is regenerable` (`test/studio-build.test.js:89`) fails when the committed file is stale.
 - `npm run serve` serves the repo root on port 8730 (`package.json` `scripts.serve`). Open `http://localhost:8730/demo/` for the dev page.
 - No runtime or dev dependencies. `package.json` has no `dependencies` or `devDependencies`.
 - Layout:
@@ -438,7 +438,7 @@ Both paths use `buildShowcaseHtml` (`src/cli/bundle.js:13-35`). The HTML is self
   - `src/player/`: `config.js`, `format.js`, `schedule.js`, `styles.js`, `claude-replay.js`. Only `claude-replay.js` touches the DOM.
   - `src/studio/`: `studio.js`. Pure functions for the studio page: input reading, parser options, export file name, embed snippet.
   - `demo/`: studio page source (`index.html`, `demo.js`). Served as the dev page at `/demo/`.
-  - `claude-replay-studio.html`: generated by `npm run build`. Do not edit by hand.
+  - `index.html`: generated by `npm run build`. Do not edit by hand.
   - `showcases/sample/`: generated from `test/fixtures/session.jsonl`, a synthetic transcript.
   - `test/`: `node:test` suites and fixtures.
 - Files inlined into the studio (`src/player/*.js`, `src/cli/redact.js`, `src/cli/parse.js`, `src/cli/bundle.js`, `src/studio/studio.js`, `demo/demo.js`) must use one-line `import` statements ending in `;`, and `export function`, `export const` or `export class` declarations. The bundler strips only these forms, with line-based regexes (`src/cli/bundle.js:7-11`). Other `import` or `export` forms are embedded unchanged, which can break the single script. Top-level names must be unique across all of these files. The builder escapes `</script` in the inlined code (`src/cli/build-studio.js:21`).

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "build": "node bin/claude-replay.js studio -o claude-replay-studio.html",
+    "build": "node bin/claude-replay.js studio -o index.html",
     "serve": "python3 -m http.server 8730"
   },
   "engines": {

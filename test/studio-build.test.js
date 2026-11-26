@@ -83,7 +83,7 @@ function moduleCode(html) {
 }
 
 function artifact() {
-  return readFileSync(join(root, 'claude-replay-studio.html'), 'utf8');
+  return readFileSync(join(root, 'index.html'), 'utf8');
 }
 
 test('studio artifact is regenerable', () => {
@@ -91,7 +91,7 @@ test('studio artifact is regenerable', () => {
   const out = join(dir, 'studio.html');
   const result = spawnSync(process.execPath, [entry, 'studio', '-o', out], { encoding: 'utf8', cwd: root });
   assert.equal(result.status, 0, result.stderr);
-  assert.ok(readFileSync(out).equals(readFileSync(join(root, 'claude-replay-studio.html'))));
+  assert.ok(readFileSync(out).equals(readFileSync(join(root, 'index.html'))));
 });
 
 test('studio artifact is self-contained', () => {
