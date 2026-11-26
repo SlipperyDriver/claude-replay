@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "claude-replay sample",
+    "claudeVersion": "2.1.308",
+    "model": "Sonnet 5.5",
+    "modelId": "claude-sonnet-5-5",
+    "effort": "high",
+    "agent": "orchestrator",
+    "cwd": "~/Projects/demo-app",
+    "project": "demo-app",
+    "branch": "main",
+    "isWorktree": false,
+    "permissionMode": "bypassPermissions",
+    "durationMs": 42000
+  },
+  "events": [
+    {
+      "type": "prompt",
+      "t": 0,
+      "turn": 1,
+      "text": "Add a --version flag to the CLI and run the tests"
+    },
+    {
+      "type": "thinking",
+      "t": 2000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "durationMs": 5200
+    },
+    {
+      "type": "text",
+      "t": 4000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "text": "Reading the CLI entry point."
+    },
+    {
+      "type": "tool_use",
+      "t": 5000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "id": "t1",
+      "name": "Read",
+      "summary": "~/Projects/demo-app/bin/cli.js",
+      "durationMs": 1000
+    },
+    {
+      "type": "tool_result",
+      "t": 6000,
+      "turn": 1,
+      "toolUseId": "t1",
+      "isError": false,
+      "lines": [
+        "1\tcli.js line 1",
+        "2\tcli.js line 2",
+        "3\tcli.js line 3",
+        "4\tcli.js line 4",
+        "5\tcli.js line 5",
+        "6\tcli.js line 6",
+        "7\tcli.js line 7",
+        "8\tcli.js line 8",
+        "9\tcli.js line 9",
+        "10\tcli.js line 10",
+        "11\tcli.js line 11",
+        "12\tcli.js line 12",
+        "13\tcli.js line 13",
+        "14\tcli.js line 14",
+        "15\tcli.js line 15",
+        "16\tcli.js line 16",
+        "17\tcli.js line 17",
+        "18\tcli.js line 18",
+        "19\tcli.js line 19",
+        "20\tcli.js line 20"
+      ],
+      "totalLines": 30
+    },
+    {
+      "type": "tool_use",
+      "t": 8000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "id": "t2",
+      "name": "Edit",
+      "summary": "~/Projects/demo-app/bin/cli.js",
+      "durationMs": 1000
+    },
+    {
+      "type": "tool_result",
+      "t": 9000,
+      "turn": 1,
+      "toolUseId": "t2",
+      "isError": false,
+      "lines": [
+        "The file ~/Projects/demo-app/bin/cli.js has been updated successfully."
+      ],
+      "totalLines": 1
+    },
+    {
+      "type": "tool_use",
+      "t": 10000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "id": "t3",
+      "name": "Bash",
+      "summary": "npm test",
+      "durationMs": 8000
+    },
+    {
+      "type": "tool_result",
+      "t": 18000,
+      "turn": 1,
+      "toolUseId": "t3",
+      "isError": false,
+      "lines": [
+        "> demo-app@1.0.0 test",
+        "> node --test",
+        "",
+        "# pass 12",
+        "# fail 0"
+      ],
+      "totalLines": 5
+    },
+    {
+      "type": "text",
+      "t": 20000,
+      "turn": 1,
+      "contextTokens": 42002,
+      "text": "Added `--version`. All 12 tests pass."
+    },
+    {
+      "type": "prompt",
+      "t": 30000,
+      "turn": 2,
+      "text": "Ask a planner to outline the release steps"
+    },
+    {
+      "type": "tool_use",
+      "t": 32000,
+      "turn": 2,
+      "contextTokens": 42002,
+      "id": "t4",
+      "name": "Agent",
+      "summary": "planner: Outline release steps",
+      "durationMs": 1000
+    },
+    {
+      "type": "tool_result",
+      "t": 33000,
+      "turn": 2,
+      "toolUseId": "t4",
+      "isError": false,
+      "lines": [
+        "Running in background"
+      ],
+      "totalLines": 1
+    },
+    {
+      "type": "text",
+      "t": 42000,
+      "turn": 2,
+      "contextTokens": 42002,
+      "text": "Planner finished: 1. bump version 2. tag 3. publish."
+    }
+  ]
+}
