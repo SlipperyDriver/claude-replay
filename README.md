@@ -47,8 +47,8 @@ The right-hand column, top to bottom:
    | Max result lines | `--max-result-lines <N>` | empty: `20` |
    | Extra redact patterns (one per line) | `--redact <regex>` | none |
 
-   Fields re-parse on every change. An invalid value shows an error in the input status, and the player keeps the previous timeline (`demo/demo.js:156-170`).
-3. Redaction. Shows `<R> redactions applied` for a transcript, or `Timeline loaded as-is: no redaction applied` for a `timeline.json` (`demo/demo.js:165`).
+   Fields re-parse on every change. An invalid value shows an error in the input status, and the player keeps the previous timeline (`demo/demo.js:157-171`).
+3. Redaction. Shows `<R> redactions applied` for a transcript, or `Timeline loaded as-is: no redaction applied` for a `timeline.json` (`demo/demo.js:166`).
 4. Review warning. Lists what pattern-based redaction does not catch. See [Privacy and redaction](#privacy-and-redaction).
 5. Export:
    - Download timeline.json writes the same format as `parse` (`bin/claude-replay.js:109`).
@@ -60,7 +60,7 @@ The right-hand column, top to bottom:
      ```
 
      The snippet uses `width` and `height` from the current config (`src/studio/studio.js:92-95`).
-6. Player settings, below Export. Changes apply to the player at once. The Config JSON box shows the full config (`demo/demo.js:95-129`).
+6. Player settings, below Export. Changes apply to the player at once. The Config JSON box shows the full config (`demo/demo.js:96-130`).
 
 Config and turns:
 
@@ -117,7 +117,7 @@ Inline form. Replace `<` with `\u003c` inside the JSON so the text cannot close 
 
 The element dispatches `statechange` on every state change. `event.detail.state` holds the new state.
 
-A failed load sets `state` to `error` and shows `Failed to load timeline: <message>` in the player (`src/player/claude-replay.js:483-494`).
+A failed load sets `state` to `error` and shows `Failed to load timeline: <message>` in the player (`src/player/claude-replay.js:484-495`).
 
 ### Styling
 
@@ -182,6 +182,7 @@ Top-level keys are in backticks. Nested keys use dot notation.
 | `tool.minMs` | `400` | 0 to 600000 | Minimum wait. |
 | `tool.maxMs` | `3000` | 0 to 600000 | Maximum wait. |
 | `tool.multiplier` | `1` | 0.05 to 20 | Scales wait. |
+| `tool.combine` | `true` | boolean | Shows consecutive calls of the same tool, or of the same MCP server (`mcp__<server>__<tool>`), as one line. Results of combined calls are hidden. `false` shows each call on its own line. |
 | `output` | | | Streamed assistant text. |
 | `output.cps` | `600` | 1 to 100000 | Characters per second. |
 | `output.maxMs` | `2500` | 0 to 600000 | Maximum streaming duration. |
@@ -202,17 +203,22 @@ Top-level keys are in backticks. Nested keys use dot notation.
 
 ### Timing
 
-Schedule durations are in ms at `speed` 1. `speed` scales elapsed real time and applies live, without a rebuild (`src/player/claude-replay.js:506-510`).
+Schedule durations are in ms at `speed` 1. `speed` scales elapsed real time and applies live, without a rebuild (`src/player/claude-replay.js:507-511`).
 
-- **Typing** (`prompt`): for each character, `delay = (1000 / typing.cps) × (1 + typing.jitter × (2r - 1))`. `r` comes from a PRNG seeded by `seed` (mulberry32). Add `typing.punctuationPauseMs` after each of `.,;:?!`. If the sum exceeds `typing.maxMs`, scale all delays by `maxMs / sum`. Multiply by `typing.multiplier`. Then wait `typing.submitPauseMs` (`src/player/schedule.js:39-57, 87-90`).
-- **Thinking**: `clamp(durationMs × thinking.scale, thinking.minMs, thinking.maxMs) × thinking.multiplier`. `durationMs` is the transcript's thinking duration (`src/player/schedule.js:91-94`).
-- **Tool wait** (`tool_use`): `clamp(durationMs × tool.scale, tool.minMs, tool.maxMs) × tool.multiplier`. `durationMs` is the time from the tool call to its result, or `0` when unknown (`src/player/schedule.js:99-102`; `src/cli/parse.js:126`).
-- **Text**: `min(text length / output.cps × 1000, output.maxMs) × output.multiplier` (`src/player/schedule.js:95-98`).
-- **Tool result**: no duration. Omitted when `results.show` is `false` (`src/player/schedule.js:72, 103-104`).
-- **Gaps**: `gapMs` follows every segment except typing. After typing comes only the submit pause (`src/player/schedule.js:73-90`).
-- **Turns**: events outside `turns` are not scheduled (`src/player/schedule.js:68-70`).
+- **Typing** (`prompt`): for each character, `delay = (1000 / typing.cps) × (1 + typing.jitter × (2r - 1))`. `r` comes from a PRNG seeded by `seed` (mulberry32). Add `typing.punctuationPauseMs` after each of `.,;:?!`. If the sum exceeds `typing.maxMs`, scale all delays by `maxMs / sum`. Multiply by `typing.multiplier`. Then wait `typing.submitPauseMs` (`src/player/schedule.js:40-58, 122-125`).
+- **Thinking**: `clamp(durationMs × thinking.scale, thinking.minMs, thinking.maxMs) × thinking.multiplier`. `durationMs` is the transcript's thinking duration (`src/player/schedule.js:126-129`).
+- **Tool wait** (`tool_use`): `clamp(durationMs × tool.scale, tool.minMs, tool.maxMs) × tool.multiplier`. `durationMs` is the time from the tool call to its result, or `0` when unknown (`src/player/schedule.js:134-137`; `src/cli/parse.js:126`).
+- **Text**: `min(text length / output.cps × 1000, output.maxMs) × output.multiplier` (`src/player/schedule.js:130-133`).
+- **Tool result**: no duration. Omitted when `results.show` is `false` (`src/player/schedule.js:106, 138-139`).
+- **Combined calls** (`tool.combine`): consecutive `tool_use` events with the same key form one group. The key is the tool name, or `mcp__<server>` for `mcp__<server>__<tool>`. Tool results do not end a group. `prompt`, `thinking` and `text` do, and so does a call with another key. Events outside `turns` are ignored. A run of one plays as before (`src/player/schedule.js:60-93`).
+  - Each call keeps its own tool wait. Results of grouped calls are not scheduled (`src/player/schedule.js:107`).
+  - The first call shows its normal line, `⏺ Read(<summary>)`, until the second call starts. Then the row shows the number of calls started so far: `Read N files`, `Searched for N patterns` (`Grep`, `Glob`), `Called <server> N times` (MCP), or `Called <Tool> N times` (other tools) (`src/player/format.js:92-100`). Labels approximate the Claude Code CLI; see [Limitations](#limitations).
+  - The `⏺` mark turns red if any call in the group failed, otherwise green (`src/player/claude-replay.js:571-579, 636-639`).
+  - Grouping happens at play time. Timeline files do not change, and the studio checkbox applies live (`src/player/claude-replay.js:299-311`).
+- **Gaps**: `gapMs` follows every segment except typing. After typing comes only the submit pause (`src/player/schedule.js:108-125`).
+- **Turns**: events outside `turns` are not scheduled (`src/player/schedule.js:60-64, 105`).
 
-Changing any config key other than `speed` rebuilds the schedule. Playback keeps the same fraction of the total length (`src/player/claude-replay.js:299-311, 496-504`).
+Changing any config key other than `speed` rebuilds the schedule. Playback keeps the same fraction of the total length (`src/player/claude-replay.js:299-311, 497-505`).
 
 ## CLI
 
@@ -378,7 +384,7 @@ Every event has `type`, `t` and `turn`:
 
 `thinking`, `text` and `tool_use` also have an optional `contextTokens`: input, cache creation and cache read tokens of the API message (`src/cli/parse.js:40-43, 168`).
 
-The player checks only `version` (must be `1`), that `events` is an array, and each event's `type`. Other fields fall back to defaults (`src/player/schedule.js:6-17`).
+The player checks only `version` (must be `1`), that `events` is an array, and each event's `type`. Other fields fall back to defaults (`src/player/schedule.js:7-18`).
 
 ## Deploy to GitHub Pages
 
@@ -451,7 +457,7 @@ Both paths use `buildShowcaseHtml` (`src/cli/bundle.js:13-35`). The HTML is self
 - Subagent internals are not rendered. Entries with `isSidechain` set to `true` are skipped, and `subagents/*.jsonl` files are not read (`src/cli/parse.js:205`). An `Agent` tool call shows `subagent_type: description`. A background launch shows `Running in background` (`src/cli/parse.js:30-31, 118`).
 - Startup warnings and notices are not replayed. The parser ignores `system` entries (`src/cli/parse.js:3`).
 - The header billing line (`API Usage Billing` in the original CLI) is not in transcripts. Set `header.billing` to show it.
-- The status line timer `⏱` shows the session time from the transcript, not the replay clock (`src/player/format.js:61`; `src/player/claude-replay.js:557`).
+- The status line timer `⏱` shows the session time from the transcript, not the replay clock (`src/player/format.js:62`; `src/player/claude-replay.js:558`).
 - Thinking text is not included unless `--thinking-text` is set, or Include thinking text is checked in the studio.
 - The transcript format is undocumented here and may change between Claude Code versions. Field names were observed in Claude Code 2.1.308 transcripts. The parser reads every field with a fallback.
 - The dev page at `demo/` needs an HTTP server and has no Export. See [Quick start](#quick-start).
@@ -459,3 +465,4 @@ Both paths use `buildShowcaseHtml` (`src/cli/bundle.js:13-35`). The HTML is self
 - The studio was checked only in headless Chromium (Chrome headless shell). Downloads and clipboard copy were not tested headless. Safari and Firefox `file://` behavior is not verified.
 - The studio parses transcripts on the main thread. Large transcripts can pause the page.
 - Play turns hides turns but keeps them in the export. Use Keep turns to remove them (see [Studio](#studio)).
+- Combined-call labels approximate the Claude Code CLI and were not checked against it. MCP grouping was not checked against real transcripts: none of the inspected transcripts contain an MCP tool call. An MCP server name that contains `__` splits at the first `__`.
